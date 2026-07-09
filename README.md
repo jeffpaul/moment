@@ -2,6 +2,9 @@
 
 Personal Site Publisher Mode for WordPress.
 
+**Requires at least:** 6.0 (WP 7.0 for real AI Assist) · **Tested up to:** 7.0 ·
+**Requires PHP:** 8.1 · **Stable tag:** 0.1.0 · **License:** GPLv2 or later
+
 Moment is a phone-first publishing experience for WordPress. A logged-in
 user visits `/moment`, picks media from the camera roll, adds a caption,
 and publishes a standard WordPress post — the site stays the canonical
