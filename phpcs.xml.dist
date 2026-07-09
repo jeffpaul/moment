@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<ruleset name="Moment">
+	<description>WordPress Coding Standards for the Moment plugin.</description>
+
+	<file>moment.php</file>
+	<file>includes</file>
+	<file>blocks</file>
+	<file>templates</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<arg value="sp"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+
+	<config name="minimum_wp_version" value="7.0"/>
+	<config name="testVersion" value="8.1-"/>
+
+	<rule ref="WordPress">
+		<!-- Prototype-scale meta queries are a documented decision (CLAUDE.md). -->
+		<exclude name="WordPress.DB.SlowDBQuery.slow_db_query_meta_key"/>
+		<exclude name="WordPress.DB.SlowDBQuery.slow_db_query_meta_value"/>
+		<exclude name="WordPress.DB.SlowDBQuery.slow_db_query_meta_query"/>
+		<!-- Short array syntax and short ternaries are fine on PHP 8.1+. -->
+		<exclude name="Universal.Operators.DisallowShortTernary.Found"/>
+	</rule>
+
+	<!-- Keep the established short class-file names (class-publisher.php for
+	     Moment_Publisher) rather than repeating the plugin prefix in every filename. -->
+	<rule ref="WordPress.Files.FileName">
+		<properties>
+			<property name="strict_class_file_names" value="false"/>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="moment"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="moment"/>
+				<element value="Moment"/>
+				<element value="MOMENT"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- The standalone app shell prints its own asset tags by design (no theme, no wp_head). -->
+	<rule ref="WordPress.WP.EnqueuedResources">
+		<exclude-pattern>templates/app-shell.php</exclude-pattern>
+	</rule>
+</ruleset>

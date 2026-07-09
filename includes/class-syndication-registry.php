@@ -246,7 +246,7 @@ class Moment_Syndication_Registry {
 	 * carries what conversation backflow needs later: external ID/URL,
 	 * connector label, timestamp, status, and backflow capability.
 	 *
-	 * @param int                                  $post_id Moment post ID.
+	 * @param int                                 $post_id Moment post ID.
 	 * @param array<string, array<string, mixed>> $results Publish results keyed by connector ID.
 	 * @return void
 	 */

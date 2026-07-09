@@ -46,25 +46,25 @@ class Moment_REST_Controller extends WP_REST_Controller {
 					'callback'            => array( $this, 'create_moment' ),
 					'permission_callback' => array( $this, 'permissions_check' ),
 					'args'                => array(
-						'caption'               => array(
+						'caption'              => array(
 							'type'              => 'string',
 							'sanitize_callback' => 'wp_kses_post',
 						),
-						'title'                 => array(
+						'title'                => array(
 							'type'              => 'string',
 							'sanitize_callback' => 'sanitize_text_field',
 						),
-						'primary_type'          => array(
+						'primary_type'         => array(
 							'type'              => 'string',
 							'sanitize_callback' => 'sanitize_key',
 						),
-						'syndication_targets'   => array(
+						'syndication_targets'  => array(
 							'description' => __( 'Selected connector IDs (array or JSON string).', 'moment' ),
 						),
-						'default_destinations'  => array(
+						'default_destinations' => array(
 							'description' => __( 'Default connector IDs (array or JSON string).', 'moment' ),
 						),
-						'ai_assist_used'        => array(
+						'ai_assist_used'       => array(
 							'type'              => 'boolean',
 							'sanitize_callback' => 'rest_sanitize_boolean',
 						),
@@ -191,14 +191,14 @@ class Moment_REST_Controller extends WP_REST_Controller {
 		}
 
 		$data = array(
-			'caption'               => wp_kses_post( (string) $request->get_param( 'caption' ) ),
-			'title'                 => sanitize_text_field( (string) $request->get_param( 'title' ) ),
-			'primary_type'          => sanitize_key( (string) $request->get_param( 'primary_type' ) ),
-			'syndication_targets'   => $targets,
-			'default_destinations'  => $request->get_param( 'default_destinations' ),
-			'ai_assist_used'        => rest_sanitize_boolean( $request->get_param( 'ai_assist_used' ) ),
-			'alt_text'              => sanitize_text_field( (string) $request->get_param( 'alt_text' ) ),
-			'tags'                  => array_filter( array_map( 'sanitize_text_field', (array) ( $request->get_param( 'tags' ) ?? array() ) ) ),
+			'caption'              => wp_kses_post( (string) $request->get_param( 'caption' ) ),
+			'title'                => sanitize_text_field( (string) $request->get_param( 'title' ) ),
+			'primary_type'         => sanitize_key( (string) $request->get_param( 'primary_type' ) ),
+			'syndication_targets'  => $targets,
+			'default_destinations' => $request->get_param( 'default_destinations' ),
+			'ai_assist_used'       => rest_sanitize_boolean( $request->get_param( 'ai_assist_used' ) ),
+			'alt_text'             => sanitize_text_field( (string) $request->get_param( 'alt_text' ) ),
+			'tags'                 => array_filter( array_map( 'sanitize_text_field', (array) ( $request->get_param( 'tags' ) ?? array() ) ) ),
 		);
 
 		$post_id = Moment_Plugin::instance()->publisher->publish( $data, is_array( $files ) ? $files : array() );

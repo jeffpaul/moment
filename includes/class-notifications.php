@@ -322,7 +322,7 @@ class Moment_Notifications {
 						'source_label' => $label,
 						'external_id'  => 'mock-reply-' . uniqid(),
 						'external_url' => $external_url ? $external_url . '#reply-' . $reply_number : '',
-						'created_at'   => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 5 * $reply_number ) . ' minutes', current_time( 'timestamp' ) ) ),
+						'created_at'   => gmdate( 'Y-m-d H:i:s', time() - ( 5 * $reply_number * MINUTE_IN_SECONDS ) ),
 					)
 				);
 

@@ -48,15 +48,15 @@ class Moment_Publisher {
 	/**
 	 * Content-sniffed MIME aliases mapped to their canonical allowed type.
 	 *
-	 * finfo reports some formats with non-canonical names (e.g. WAV).
+	 * Content sniffing (finfo) reports some formats with non-canonical names (e.g. WAV).
 	 *
 	 * @var array<string, string>
 	 */
 	private const MIME_ALIASES = array(
-		'audio/x-wav'  => 'audio/wav',
-		'audio/wave'   => 'audio/wav',
-		'audio/mp3'    => 'audio/mpeg',
-		'video/x-m4v'  => 'video/mp4',
+		'audio/x-wav' => 'audio/wav',
+		'audio/wave'  => 'audio/wav',
+		'audio/mp3'   => 'audio/mpeg',
+		'video/x-m4v' => 'video/mp4',
 	);
 
 	/**
