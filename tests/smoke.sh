@@ -40,7 +40,7 @@ cleanup() {
   "$WP" eval '
     $sf = getenv("MOMENT_SMOKE_STATE");
     $state = json_decode((string) @file_get_contents($sf), true) ?: array();
-    foreach (array("image_id", "note_id", "override_id", "normal_id") as $key) {
+    foreach (array("image_id", "note_id", "plain_note_id", "override_id", "normal_id") as $key) {
       if (!empty($state[$key])) { wp_delete_post((int) $state[$key], true); }
     }
     if (!empty($state["att_id"])) { wp_delete_attachment((int) $state["att_id"], true); }
@@ -130,7 +130,7 @@ read -r -d '' PHP <<'PHP' || true
 wp_set_current_user(1);
 $sf = getenv("MOMENT_SMOKE_STATE");
 $state = json_decode((string) @file_get_contents($sf), true) ?: array();
-$post_id = Moment_Plugin::instance()->publisher->publish(array("caption" => "Smoke test note moment"));
+$post_id = Moment_Plugin::instance()->publisher->publish(array("caption" => "Smoke test note moment", "syndication_targets" => array("bluesky")));
 if (is_wp_error($post_id)) { echo "FAIL: note publish returned WP_Error: " . $post_id->get_error_message() . "\n"; return; }
 $state["note_id"] = (int) $post_id;
 $post = get_post($post_id);
@@ -139,11 +139,22 @@ echo "1" === get_post_meta($post_id, "_moment_is_moment", true) ? "PASS: note ma
 $type = get_post_meta($post_id, "_moment_primary_type", true);
 echo "note" === $type ? "PASS: caption-only Moment detected as type note\n" : "FAIL: _moment_primary_type is {$type}, expected note\n";
 $targets = json_decode((string) get_post_meta($post_id, "_moment_syndication_targets", true), true);
-echo is_array($targets) && in_array("bluesky", $targets, true) ? "PASS: note Moment defaulted to bluesky target\n" : "FAIL: note targets are " . wp_json_encode($targets) . ", expected to contain bluesky\n";
+echo is_array($targets) && in_array("bluesky", $targets, true) ? "PASS: explicit bluesky target stored\n" : "FAIL: note targets are " . wp_json_encode($targets) . ", expected to contain bluesky\n";
 $external = json_decode((string) get_post_meta($post_id, "_moment_external_posts", true), true);
 echo is_array($external) && isset($external["bluesky"]) ? "PASS: mocked syndication stored bluesky external post reference\n" : "FAIL: _moment_external_posts missing bluesky: " . wp_json_encode($external) . "\n";
 $sstatus = get_post_meta($post_id, "_moment_syndication_status", true);
 echo "mocked" === $sstatus ? "PASS: _moment_syndication_status = mocked\n" : "FAIL: syndication status is {$sstatus}, expected mocked\n";
+// Auto-applied defaults only target CONNECTED connectors: with none
+// configured, a caption-only publish records the model default but
+// syndicates nowhere.
+$plain_id = Moment_Plugin::instance()->publisher->publish(array("caption" => "Smoke test unconnected defaults"));
+if (is_wp_error($plain_id)) { echo "FAIL: plain note publish returned WP_Error\n"; return; }
+$state["plain_note_id"] = (int) $plain_id;
+$plain_targets = json_decode((string) get_post_meta($plain_id, "_moment_syndication_targets", true), true);
+$plain_defaults = json_decode((string) get_post_meta($plain_id, "_moment_default_destinations", true), true);
+echo array() === $plain_targets ? "PASS: no-selection publish targets nothing (bluesky not connected)\n" : "FAIL: no-selection targets are " . wp_json_encode($plain_targets) . ", expected []\n";
+echo is_array($plain_defaults) && in_array("bluesky", $plain_defaults, true) ? "PASS: model default (bluesky) still recorded in _moment_default_destinations\n" : "FAIL: _moment_default_destinations is " . wp_json_encode($plain_defaults) . "\n";
+echo "not_attempted" === get_post_meta($plain_id, "_moment_syndication_status", true) ? "PASS: no-selection publish syndication status not_attempted\n" : "FAIL: status is " . get_post_meta($plain_id, "_moment_syndication_status", true) . "\n";
 file_put_contents($sf, wp_json_encode($state));
 PHP
 run_eval "note Moment" "$PHP"

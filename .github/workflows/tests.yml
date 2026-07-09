@@ -206,6 +206,11 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" /tmp/wp/wp-content/plugins/moment
           wp plugin activate moment --path=/tmp/wp
           wp rewrite flush --path=/tmp/wp
+          # Demo mode: the publish screen hides unconnected networks by
+          # default; the E2E suite asserts against the mocked connectors.
+          mkdir -p /tmp/wp/wp-content/mu-plugins
+          printf '<?php add_filter( "moment_show_unconnected_connectors", "__return_true" );\n' \
+            > /tmp/wp/wp-content/mu-plugins/moment-demo-mode.php
 
       - name: Start web server
         run: |

@@ -119,7 +119,12 @@ class Moment_Publisher {
 		$selection_provided = is_array( $raw_targets ) || ( is_string( $raw_targets ) && '' !== trim( $raw_targets ) );
 
 		if ( ! $selection_provided ) {
-			$targets = $defaults;
+			// Auto-applied defaults only go to destinations that can
+			// actually publish (connected connectors). The raw model
+			// defaults are still recorded in _moment_default_destinations;
+			// explicit selections (e.g. tests, API callers) are honored
+			// as-is, mocked or not.
+			$targets = $this->filter_connected( $defaults );
 		}
 
 		$title = isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '';
@@ -642,6 +647,31 @@ class Moment_Publisher {
 		$registry = Moment_Plugin::instance()->syndication_registry;
 
 		return $this->sanitize_connector_ids( $registry->get_default_destinations( $type ) );
+	}
+
+	/**
+	 * Reduce a connector ID list to those with a connected connector.
+	 *
+	 * @param string[] $ids Connector IDs.
+	 * @return string[]
+	 */
+	private function filter_connected( array $ids ): array {
+		if ( ! class_exists( 'Moment_Plugin' ) ) {
+			return array();
+		}
+
+		$registry = Moment_Plugin::instance()->syndication_registry;
+
+		return array_values(
+			array_filter(
+				$ids,
+				static function ( $id ) use ( $registry ): bool {
+					$connector = $registry->get_connector( (string) $id );
+
+					return $connector && $connector->is_connected();
+				}
+			)
+		);
 	}
 
 	/**

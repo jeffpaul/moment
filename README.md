@@ -109,6 +109,61 @@ Mastodon** (`moment-connector-mastodon/`):
 The same never-blocks rule applies: unconfigured or failing, it falls
 back to mocked demo behavior.
 
+### Why don't I see any social networks on the publish screen?
+
+Moment only offers destinations that can actually publish (and pull
+replies back): a network appears once its connector plugin is active
+*and* configured. With nothing connected, "Your Site" is the only
+destination — which is the honest state of the world. Demos and tests
+can surface the built-in mocked connectors with:
+
+```php
+add_filter( 'moment_show_unconnected_connectors', '__return_true' );
+```
+
+The same rule applies to AI: the **AI Assist** button only appears when
+a WordPress AI provider is actually configured.
+
+### What social network connectors could work?
+
+Moment's adapter layer (`moment_register_connectors` +
+`moment_import_network_responses`) is open to any network. Feasibility
+by platform:
+
+| Network | Publish | Reply backflow | Notes |
+|---|---|---|---|
+| **Bluesky** | ✅ shipped | ✅ shipped | App password; AT Protocol is open, no app review |
+| **Mastodon** | ✅ shipped | ✅ shipped | Per-instance access token; open API, no app review |
+| Threads | plausible | plausible | Official API exists; requires a Meta app + review |
+| X | plausible | limited | API v2 posting works; free tier is heavily rate-limited, replies effectively need a paid tier |
+| Instagram | hard | hard | Graph API requires a Business/Creator account, app review, and media hosted at public URLs |
+| YouTube | plausible | plausible | Data API v3 upload + commentThreads; OAuth app + quota management |
+| TikTok | hard | hard | Content Posting API requires developer-program approval and audited scopes |
+| Pixelfed / micro.blog / Nostr | plausible | varies | Open/self-hostable protocols, similar shape to Mastodon |
+
+The pattern is consistent: open protocols (AT, ActivityPub) are
+weekend-sized connectors; platforms with app-review gates are projects.
+
+### Which AI providers power which Moment features?
+
+Moment never talks to an AI vendor directly — it goes through the
+WordPress 7.0 **AI Client**, so any configured provider plugin powers
+all of AI Assist. Configure exactly one (or several — the first
+configured provider is used):
+
+| Provider plugin | Powers |
+|---|---|
+| AI Provider for Anthropic (Claude) | Caption suggestions, alt text drafts, tag suggestions — the full AI Assist sheet |
+| AI Provider for Google (Gemini) | Same — the features are provider-agnostic |
+| AI Provider for OpenAI (GPT) | Same |
+
+Feature-by-feature: **caption suggestion** rewrites your draft text (or
+proposes one from the media context); **alt text** drafts accessibility
+text for the primary image; **tags** proposes post tags — accepted
+suggestions are applied as real post tags and attachment alt text at
+publish. All of it is optional: no provider, no AI UI, and publishing
+never depends on it.
+
 ## Using Moment Like a Phone App
 
 Moment is designed to sit on your phone's home screen like a native app.

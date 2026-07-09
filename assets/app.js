@@ -379,7 +379,11 @@
 						state.caption
 					)}</textarea>
 				</div>
-				<button type="button" class="moment-btn moment-btn--secondary" data-action="ai-assist">AI Assist</button>
+				${
+					config.ai && config.ai.available
+						? '<button type="button" class="moment-btn moment-btn--secondary" data-action="ai-assist">AI Assist</button>'
+						: '' /* No AI provider configured — no AI options offered. */
+				}
 			</section>
 			<footer class="moment-actionbar">
 				<p class="moment-status" data-create-status aria-live="polite"></p>
@@ -419,10 +423,13 @@
 				state.caption = caption.value;
 			});
 
-			root.querySelector('[data-action="ai-assist"]').addEventListener('click', (event) => {
-				state.caption = caption.value;
-				AIAssistSheet.show(event.currentTarget);
-			});
+			const aiButton = root.querySelector('[data-action="ai-assist"]');
+			if (aiButton) {
+				aiButton.addEventListener('click', (event) => {
+					state.caption = caption.value;
+					AIAssistSheet.show(event.currentTarget);
+				});
+			}
 
 			root.querySelector('[data-action="next"]').addEventListener('click', () => {
 				state.caption = caption.value;
@@ -713,7 +720,15 @@
 				return !connector || connectorSupportsType(connector, state.primaryType);
 			});
 
-			const rows = connectors
+			const rows = connectors.length
+				? '' // populated below
+				: `<li class="moment-dest moment-dest--locked">
+					<span class="moment-dest__row"><span class="moment-dest__info">
+						<span class="moment-recent__meta">No social networks connected yet — your site is the only destination. Connect one via a Moment connector plugin (Settings → Connectors).</span>
+					</span></span>
+				</li>`;
+
+			const connectorRows = connectors
 				.map((connector) => {
 					const supported = connectorSupportsType(connector, state.primaryType);
 					const checked = supported && state.targets.includes(connector.id) ? ' checked' : '';
@@ -769,7 +784,7 @@
 							</span>
 						</span>
 					</li>
-					${rows}
+					${connectors.length ? connectorRows : rows}
 				</ul>
 			</section>
 			<footer class="moment-actionbar">

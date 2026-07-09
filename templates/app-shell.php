@@ -46,7 +46,23 @@ $moment_registry   = Moment_Syndication_Registry::instance();
 $moment_all_types  = array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' );
 $moment_connectors = array();
 
+/**
+ * Filters whether unconnected connectors appear as publish destinations.
+ *
+ * By default only genuinely connected networks (a real connector plugin
+ * with credentials configured) are offered — a destination that cannot
+ * actually publish or return replies is not shown. Demos and tests can
+ * return true to surface the mocked connectors.
+ *
+ * @param bool $show_unconnected Default false.
+ */
+$moment_show_unconnected = (bool) apply_filters( 'moment_show_unconnected_connectors', false );
+
 foreach ( $moment_registry->get_connectors() as $moment_connector ) {
+	if ( ! $moment_connector->is_connected() && ! $moment_show_unconnected ) {
+		continue;
+	}
+
 	$moment_connectors[] = array(
 		'id'           => $moment_connector->get_id(),
 		'label'        => $moment_connector->get_label(),
@@ -57,11 +73,17 @@ foreach ( $moment_registry->get_connectors() as $moment_connector ) {
 	);
 }
 
+$moment_visible_ids   = array_column( $moment_connectors, 'id' );
 $moment_type_defaults = array();
 
-foreach ( array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' ) as $moment_type ) {
-	$moment_type_defaults[ $moment_type ] = $moment_registry->get_defaults_for_type( $moment_type );
+foreach ( $moment_all_types as $moment_type ) {
+	// Defaults only preselect destinations that are actually offered.
+	$moment_type_defaults[ $moment_type ] = array_values(
+		array_intersect( $moment_registry->get_defaults_for_type( $moment_type ), $moment_visible_ids )
+	);
 }
+
+$moment_ai = Moment_Plugin::instance()->ai_assist;
 
 $moment_config = array(
 	'restUrl'     => esc_url_raw( rest_url( 'moment/v1/' ) ),
@@ -71,6 +93,10 @@ $moment_config = array(
 	'screen'      => $moment_screen,
 	'connectors'  => $moment_connectors,
 	'defaults'    => $moment_type_defaults,
+	'ai'          => array(
+		'available'     => $moment_ai->is_available(),
+		'providerLabel' => $moment_ai->get_provider_label(),
+	),
 	'currentUser' => array(
 		'id'          => (int) $moment_user->ID,
 		'displayName' => $moment_user->display_name,

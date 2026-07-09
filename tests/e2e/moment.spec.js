@@ -8,6 +8,11 @@
  * Needs a live WordPress with the moment plugin active, pretty permalinks,
  * and an administrator account. Tests create posts titled "E2E ..." and do
  * not delete them — use a scratch site or clean up afterwards.
+ *
+ * DEMO MODE REQUIRED: the publish screen hides unconnected networks by
+ * default, and these tests assert against the mocked connectors. Enable
+ * demo mode on the target site first (the CI workflow does this):
+ *   add_filter( 'moment_show_unconnected_connectors', '__return_true' );
  */
 import { test, expect } from '@playwright/test';
 

@@ -67,8 +67,12 @@ class Test_Publisher extends WP_UnitTestCase {
 		$this->assertEquals( 401, $response->get_status() );
 	}
 
-	/** Scenario 4: note defaults applied when no selection is sent. */
-	public function test_note_defaults_to_bluesky_when_no_selection() {
+	/**
+	 * Scenario 4: with no selection sent, the model default (note → bluesky)
+	 * is recorded, but auto-applied targets are filtered to CONNECTED
+	 * connectors — with none configured, nothing is targeted.
+	 */
+	public function test_note_defaults_recorded_but_only_connected_targets_applied() {
 		$publisher = new Moment_Publisher();
 		$post_id   = $publisher->publish(
 			array(
@@ -77,8 +81,24 @@ class Test_Publisher extends WP_UnitTestCase {
 			)
 		);
 
+		$defaults = json_decode( (string) get_post_meta( $post_id, '_moment_default_destinations', true ), true );
+		$this->assertContains( 'bluesky', $defaults, 'Model default should be recorded.' );
+
 		$targets = json_decode( (string) get_post_meta( $post_id, '_moment_syndication_targets', true ), true );
-		$this->assertContains( 'bluesky', $targets );
+		$this->assertSame( array(), $targets, 'Unconnected defaults must not be auto-targeted.' );
+		$this->assertSame( 'not_attempted', get_post_meta( $post_id, '_moment_syndication_status', true ) );
+
+		// An explicit selection is honored as-is, mocked or not.
+		$explicit_id = $publisher->publish(
+			array(
+				'caption'             => 'Explicit routing note',
+				'primary_type'        => 'note',
+				'syndication_targets' => array( 'bluesky' ),
+			)
+		);
+
+		$explicit_targets = json_decode( (string) get_post_meta( $explicit_id, '_moment_syndication_targets', true ), true );
+		$this->assertContains( 'bluesky', $explicit_targets );
 	}
 
 	/** Scenario 5: explicit empty selection overrides defaults. */
