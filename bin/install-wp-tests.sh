@@ -5,7 +5,9 @@
 #
 # Unlike the classic wp-scaffold script this uses a git sparse checkout of
 # WordPress/wordpress-develop instead of svn, so it runs anywhere git exists.
-# wp-version accepts a release like "7.0" (default), or "nightly"/"trunk".
+# wp-version accepts a release like "7.0" (default), a pre-release like
+# "7.1-RC1" (core from the wordpress.org pre-release build, test library from
+# the X.Y wordpress-develop branch), or "nightly"/"trunk".
 
 set -euo pipefail
 
@@ -48,6 +50,13 @@ install_core() {
 		unzip -q "$zip" -d "$TMPDIR_BASE/wordpress-nightly-extract"
 		mv "$TMPDIR_BASE/wordpress-nightly-extract/wordpress/"* "$WP_CORE_DIR/"
 		rm -rf "$TMPDIR_BASE/wordpress-nightly-extract" "$zip"
+	elif case "$WP_VERSION" in *-*) true ;; *) false ;; esac; then
+		# Pre-release build (e.g. 7.1-RC1): only published as a zip.
+		local zip="$TMPDIR_BASE/wordpress-$WP_VERSION.zip"
+		download "https://wordpress.org/wordpress-$WP_VERSION.zip" "$zip"
+		unzip -q "$zip" -d "$TMPDIR_BASE/wordpress-prerelease-extract"
+		mv "$TMPDIR_BASE/wordpress-prerelease-extract/wordpress/"* "$WP_CORE_DIR/"
+		rm -rf "$TMPDIR_BASE/wordpress-prerelease-extract" "$zip"
 	else
 		local tar="$TMPDIR_BASE/wordpress-$WP_VERSION.tar.gz"
 		download "https://wordpress.org/wordpress-$WP_VERSION.tar.gz" "$tar"
@@ -64,7 +73,8 @@ install_test_suite() {
 	else
 		local ref="trunk"
 		if [ "$WP_VERSION" != "nightly" ] && [ "$WP_VERSION" != "trunk" ]; then
-			ref="$WP_VERSION"
+			# Pre-releases (7.1-RC1, 7.1-beta2) live on the X.Y develop branch.
+			ref="${WP_VERSION%%-*}"
 		fi
 
 		local checkout="$TMPDIR_BASE/wordpress-develop-sparse"
