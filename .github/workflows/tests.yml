@@ -7,7 +7,7 @@ on:
 
 jobs:
   phpunit:
-    name: PHPUnit (WP nightly, PHP ${{ matrix.php }})
+    name: PHPUnit (WP 7.0, PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -36,8 +36,8 @@ jobs:
           coverage: none
           tools: composer
 
-      - name: Install WordPress test library (nightly)
-        run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 nightly true
+      - name: Install WordPress test library (WP 7.0)
+        run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 7.0 true
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -46,7 +46,7 @@ jobs:
         run: WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test
 
   smoke:
-    name: Smoke suite (WP nightly, live install)
+    name: Smoke suite (WP latest, live install)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -71,9 +71,9 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - name: Install scratch WordPress (nightly)
+      - name: Install scratch WordPress (latest)
         run: |
-          wp core download --version=nightly --path=/tmp/wp
+          wp core download --version=latest --path=/tmp/wp
           wp config create --path=/tmp/wp --dbname=wp_smoke --dbuser=root --dbpass=root --dbhost=127.0.0.1
           wp core install --path=/tmp/wp --url=http://smoke.test --title=Smoke \
             --admin_user=admin --admin_password=admin --admin_email=admin@smoke.test --skip-email
@@ -90,7 +90,7 @@ jobs:
           WP="$RUNNER_TEMP/wpx" bash tests/smoke.sh
 
   playwright:
-    name: Browser E2E (Playwright, WP nightly)
+    name: Browser E2E (Playwright, WP latest)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -115,9 +115,9 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - name: Install scratch WordPress (nightly)
+      - name: Install scratch WordPress (latest)
         run: |
-          wp core download --version=nightly --path=/tmp/wp
+          wp core download --version=latest --path=/tmp/wp
           wp config create --path=/tmp/wp --dbname=wp_e2e --dbuser=root --dbpass=root --dbhost=127.0.0.1
           wp core install --path=/tmp/wp --url=http://127.0.0.1:8889 --title=E2E \
             --admin_user=admin --admin_password=admin --admin_email=admin@e2e.test --skip-email

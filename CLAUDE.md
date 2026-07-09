@@ -44,7 +44,7 @@ wp plugin deactivate moment
 
 # PHP tests (from the repo root)
 composer install
-bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 nightly   # once per machine
+bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 7.0   # once per machine
 WP_TESTS_DIR=$TMPDIR/wordpress-tests-lib composer test   # macOS ($TMPDIR); /tmp on Linux/CI
 
 # WP-CLI smoke suite (57 assertions) against a live site with the plugin active

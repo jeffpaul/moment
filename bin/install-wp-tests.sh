@@ -5,8 +5,7 @@
 #
 # Unlike the classic wp-scaffold script this uses a git sparse checkout of
 # WordPress/wordpress-develop instead of svn, so it runs anywhere git exists.
-# wp-version accepts "nightly"/"trunk" (default — required while the plugin
-# targets WP 7.0 pre-release) or a tag like "7.0".
+# wp-version accepts a release like "7.0" (default), or "nightly"/"trunk".
 
 set -euo pipefail
 
@@ -19,7 +18,7 @@ DB_NAME=$1
 DB_USER=$2
 DB_PASS=$3
 DB_HOST=${4:-localhost}
-WP_VERSION=${5:-nightly}
+WP_VERSION=${5:-7.0}
 SKIP_DB_CREATE=${6:-false}
 
 TMPDIR_BASE=${TMPDIR:-/tmp}

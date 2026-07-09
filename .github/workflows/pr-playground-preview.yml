@@ -39,9 +39,8 @@ jobs:
 
           const blueprint = {
             preferredVersions: {
-              // The plugin requires WP 7.0, which is pre-release: nightly it is.
-              // Switch to 'latest' once WP 7.0 ships stable.
-              wp: 'nightly',
+              // WP 7.0+ required; 'latest' is 7.0 as of May 2026 (Armstrong).
+              wp: 'latest',
             },
             login: true,
             // Land straight in the Moment app shell.

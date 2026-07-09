@@ -18,8 +18,8 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 	fwrite(
 		STDERR,
 		"SKIPPED: WordPress test library not found at {$_tests_dir}.\n\n"
-		. "Install it with (nightly required while the plugin targets WP 7.0 pre-release):\n"
-		. "  bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 nightly\n"
+		. "Install it with:\n"
+		. "  bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 7.0\n"
 		. "Then run:\n"
 		. "  WP_TESTS_DIR=\$TMPDIR/wordpress-tests-lib composer test   # macOS\n"
 		. "  WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test      # Linux/CI\n"
