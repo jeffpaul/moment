@@ -1,0 +1,85 @@
+name: PR Playground Preview
+
+# Adds a "Preview in WordPress Playground" button to the PR description.
+# No build step needed — the plugin is plain PHP/JS, so the blueprint
+# installs it straight from the PR branch via git:directory.
+#
+# NOTE: Playground fetches the branch from the browser, unauthenticated,
+# so the button only works while the repository is PUBLIC. On a private
+# repo the button appears but the instance cannot load the plugin.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+# Disable permissions for all available scopes by default.
+# Any needed permissions should be configured at the job level.
+permissions: {}
+
+jobs:
+  playground-preview:
+    name: Add Playground preview button to the PR
+    runs-on: ubuntu-latest
+    # Fork PRs get a read-only GITHUB_TOKEN and cannot edit the PR
+    # description; skip rather than fail.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Generate Playground blueprint JSON
+        id: blueprint
+        run: |
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const repoUrl = process.env.REPO_URL;
+          const ref = process.env.HEAD_REF;
+          if (!repoUrl || !ref) {
+            throw new Error('REPO_URL and HEAD_REF are required');
+          }
+
+          const blueprint = {
+            preferredVersions: {
+              // The plugin requires WP 7.0, which is pre-release: nightly it is.
+              // Switch to 'latest' once WP 7.0 ships stable.
+              wp: 'nightly',
+            },
+            login: true,
+            // Land straight in the Moment app shell.
+            landingPage: '/moment',
+            steps: [
+              {
+                // /moment relies on rewrite rules; Playground defaults to
+                // plain permalinks, so set a pretty structure before the
+                // activation hook flushes rewrites.
+                step: 'setSiteOptions',
+                options: {
+                  permalink_structure: '/%postname%/',
+                },
+              },
+              {
+                step: 'installPlugin',
+                pluginData: {
+                  resource: 'git:directory',
+                  url: repoUrl,
+                  ref,
+                  path: '/',
+                },
+                options: {
+                  activate: true,
+                },
+              },
+            ],
+          };
+
+          console.log(`blueprint=${JSON.stringify(blueprint)}`);
+          NODE
+        env:
+          REPO_URL: ${{ github.event.pull_request.head.repo.html_url }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+
+      - name: Post Playground preview button
+        uses: WordPress/action-wp-playground-pr-preview@5e92f5e3c80d06126f22e83e4bb21221fbbd3e7f # v3
+        with:
+          mode: append-to-description
+          blueprint: ${{ steps.blueprint.outputs.blueprint }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
