@@ -244,8 +244,8 @@ class Moment_Bluesky_Client {
 	/**
 	 * POST an authenticated XRPC request.
 	 *
-	 * @param string               $path    XRPC path.
-	 * @param array<string, mixed> $body    JSON body.
+	 * @param string                   $path    XRPC path.
+	 * @param array<string, mixed>     $body    JSON body.
 	 * @param array{accessJwt: string} $session Active session.
 	 * @return array<string, mixed>|WP_Error
 	 */
@@ -306,7 +306,7 @@ class Moment_Bluesky_Client {
 	/**
 	 * Convert an at:// URI to a public bsky.app URL.
 	 *
-	 * at://did:plc:xyz/app.bsky.feed.post/rkey → https://bsky.app/profile/{handle}/post/{rkey}
+	 * Example: at://did:plc:xyz/app.bsky.feed.post/rkey → https://bsky.app/profile/{handle}/post/{rkey}
 	 *
 	 * @param string $at_uri The at:// URI.
 	 * @param string $handle Author handle for the profile path.
