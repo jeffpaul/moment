@@ -2,7 +2,7 @@
 
 Personal Site Publisher Mode for WordPress.
 
-**Requires at least:** 6.0 (WP 7.0 for real AI Assist) · **Tested up to:** 7.0 ·
+**Requires at least:** 7.0 · **Tested up to:** 7.0 ·
 **Requires PHP:** 8.1 · **Stable tag:** 0.1.0 · **License:** GPLv2 or later
 
 Moment is a phone-first publishing experience for WordPress. A logged-in
@@ -15,7 +15,7 @@ are in place; see "Using Moment Like a Phone App" below.
 
 ## Requirements
 
-- WordPress 6.0+
+- WordPress 7.0+ (the bundled AI Client powers optional AI Assist; publishing never requires a configured AI provider)
 - PHP 8.1+
 
 ## Quick start

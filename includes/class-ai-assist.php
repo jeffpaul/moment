@@ -23,13 +23,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Moment_AI_Assist {
 
 	/**
-	 * WP 7.0 AI Client SDK class (bundled with core, PSR-4 namespaced).
-	 *
-	 * @var string
-	 */
-	private const AI_CLIENT_CLASS = 'WordPress\\AiClient\\AiClient';
-
-	/**
 	 * Provider label reported when suggestions are mocked.
 	 *
 	 * @var string
@@ -67,9 +60,9 @@ class Moment_AI_Assist {
 	/**
 	 * Whether a real AI provider is available.
 	 *
-	 * True only when the WP 7.0 AI Client SDK is loaded, AI is not disabled
-	 * for the environment, AND at least one registered provider has working
-	 * credentials (per the SDK's own availability check).
+	 * True only when AI is not disabled for the environment AND at least one
+	 * registered provider has working credentials (per the SDK's own
+	 * availability check). The AI Client itself ships with core on WP 7.0+.
 	 *
 	 * @return bool
 	 */
@@ -224,7 +217,7 @@ class Moment_AI_Assist {
 	}
 
 	/**
-	 * Detect the WP 7.0 AI Client and the first configured provider.
+	 * Detect the first configured AI Client provider.
 	 *
 	 * Memoized per request. Never throws — any SDK error means "not available".
 	 *
@@ -238,19 +231,8 @@ class Moment_AI_Assist {
 		$this->available = false;
 
 		try {
-			// Neither the WP 7.0 namespaced SDK nor a legacy client class exists.
-			if ( ! class_exists( self::AI_CLIENT_CLASS ) && ! class_exists( 'WP_AI_Client' ) ) {
-				return;
-			}
-
 			// Respect the core kill switch / filter (WP_AI_SUPPORT, wp_supports_ai).
-			if ( function_exists( 'wp_supports_ai' ) && ! wp_supports_ai() ) {
-				return;
-			}
-
-			// Only the legacy `WP_AI_Client` class exists (no namespaced SDK):
-			// there is no verified safe call pattern, so stay in mock mode.
-			if ( ! class_exists( self::AI_CLIENT_CLASS ) ) {
+			if ( ! wp_supports_ai() ) {
 				return;
 			}
 
@@ -307,7 +289,7 @@ class Moment_AI_Assist {
 	 * @return string|null Trimmed response text, or null on any failure.
 	 */
 	private function generate_text( string $prompt, string $system, int $max_tokens, ?array $json_schema = null ): ?string {
-		if ( ! $this->is_available() || ! function_exists( 'wp_ai_client_prompt' ) ) {
+		if ( ! $this->is_available() ) {
 			return null;
 		}
 
@@ -502,9 +484,9 @@ class Moment_AI_Assist {
 	 * @return string
 	 */
 	private function mock_caption( array $context ): string {
-		// TODO: Replace with real WP_AI_Client call when provider is configured.
-		// WP 7.0 AI Client: https://make.wordpress.org/core/2026/03/24/introducing-the-ai-client-in-wordpress-7-0/
-		// Real path: wp_ai_client_prompt( $this->build_caption_prompt( $context ) )->generate_text().
+		// Fallback when no AI provider is configured. The real path is
+		// wp_ai_client_prompt( $this->build_caption_prompt( $context ) )->generate_text()
+		// in suggest_caption().
 		if ( '' !== $context['text'] ) {
 			return wp_html_excerpt( $context['text'], 100, '…' );
 		}
@@ -529,9 +511,9 @@ class Moment_AI_Assist {
 	 * @return string
 	 */
 	private function mock_alt_text( array $context ): string {
-		// TODO: Replace with real WP_AI_Client call when provider is configured.
-		// WP 7.0 AI Client: https://make.wordpress.org/core/2026/03/24/introducing-the-ai-client-in-wordpress-7-0/
-		// Real path: wp_ai_client_prompt( $this->build_alt_text_prompt( $context ) )->generate_text().
+		// Fallback when no AI provider is configured. The real path is
+		// wp_ai_client_prompt( $this->build_alt_text_prompt( $context ) )->generate_text()
+		// in suggest_alt_text().
 		$labels = array(
 			'image'   => 'Photo',
 			'gallery' => 'Photo gallery',
@@ -551,9 +533,9 @@ class Moment_AI_Assist {
 	 * @return string[]
 	 */
 	private function mock_tags( array $context ): array {
-		// TODO: Replace with real WP_AI_Client call when provider is configured.
-		// WP 7.0 AI Client: https://make.wordpress.org/core/2026/03/24/introducing-the-ai-client-in-wordpress-7-0/
-		// Real path: wp_ai_client_prompt( $this->build_tags_prompt( $context ) )->generate_text().
+		// Fallback when no AI provider is configured. The real path is
+		// wp_ai_client_prompt( $this->build_tags_prompt( $context ) )->generate_text()
+		// in suggest_tags().
 		return $this->sanitize_tags( array( 'moment', $context['type'], 'personal' ) );
 	}
 
