@@ -77,3 +77,5 @@ edit the SVG, regenerate the PNGs, for example:
 rsvg-convert -w 192 -h 192 assets/icon.svg > assets/icon-192.png
 rsvg-convert -w 512 -h 512 assets/icon.svg > assets/icon-512.png
 ```
+
+<!-- playground preview smoke test -->
