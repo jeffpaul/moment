@@ -695,7 +695,9 @@
 					<label class="moment-dest__row" for="moment-dest-${esc(connector.id)}">
 						<span class="moment-dest__info">
 							<span class="moment-dest__name">${esc(connector.label)}</span>
-							<span class="moment-chip moment-chip--muted">Mocked &middot; Not connected</span>
+							<span class="moment-chip ${connector.connected ? 'moment-chip--success' : 'moment-chip--muted'}">${esc(
+								connector.status_label || 'Mocked · Not connected'
+							)}</span>
 						</span>
 						<span class="moment-toggle">
 							<input type="checkbox" class="moment-toggle__input" id="moment-dest-${esc(
@@ -858,7 +860,8 @@
 			}
 			if (entry && entry.status) {
 				const label = String(entry.status);
-				return label.charAt(0).toUpperCase() + label.slice(1) + ' (demo mode)';
+				const pretty = label.charAt(0).toUpperCase() + label.slice(1);
+				return label === 'published' ? pretty : pretty + ' (demo mode)';
 			}
 			return 'Mocked (demo mode)';
 		},

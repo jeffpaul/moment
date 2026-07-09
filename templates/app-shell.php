@@ -37,59 +37,29 @@ if ( ! current_user_can( 'edit_posts' ) ) {
 $moment_user = wp_get_current_user();
 
 /*
- * Connector list and per-type destination defaults.
- *
- * Phase 5 note: hardcoded here for the prototype app shell. Once the
- * Moment_Syndication_Registry (Phase 5) is the source of truth, this
- * array must be built from the registry instead.
+ * Connector list and per-type destination defaults, from the
+ * Moment_Syndication_Registry (the source of truth) — so real connector
+ * plugins registered via `moment_register_connectors` appear here with
+ * their live connection status.
  */
-$moment_connectors = array(
-	array(
-		'id'     => 'bluesky',
-		'label'  => 'Bluesky',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'mastodon',
-		'label'  => 'Mastodon',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'threads',
-		'label'  => 'Threads',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'instagram',
-		'label'  => 'Instagram',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'tiktok',
-		'label'  => 'TikTok',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'youtube',
-		'label'  => 'YouTube',
-		'status' => 'mocked',
-	),
-	array(
-		'id'     => 'x',
-		'label'  => 'X',
-		'status' => 'mocked',
-	),
-);
+$moment_registry   = Moment_Syndication_Registry::instance();
+$moment_connectors = array();
 
-$moment_type_defaults = array(
-	'note'    => array( 'bluesky' ),
-	'image'   => array( 'instagram' ),
-	'gallery' => array( 'instagram' ),
-	'video'   => array( 'youtube' ),
-	'audio'   => array(),
-	'podcast' => array(),
-	'mixed'   => array(),
-);
+foreach ( $moment_registry->get_connectors() as $moment_connector ) {
+	$moment_connectors[] = array(
+		'id'           => $moment_connector->get_id(),
+		'label'        => $moment_connector->get_label(),
+		'connected'    => $moment_connector->is_connected(),
+		'status'       => $moment_connector->is_connected() ? 'connected' : 'mocked',
+		'status_label' => $moment_connector->get_status_label(),
+	);
+}
+
+$moment_type_defaults = array();
+
+foreach ( array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' ) as $moment_type ) {
+	$moment_type_defaults[ $moment_type ] = $moment_registry->get_defaults_for_type( $moment_type );
+}
 
 $moment_config = array(
 	'restUrl'     => esc_url_raw( rest_url( 'moment/v1/' ) ),

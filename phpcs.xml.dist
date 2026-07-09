@@ -6,6 +6,7 @@
 	<file>includes</file>
 	<file>blocks</file>
 	<file>templates</file>
+	<file>moment-connector-bluesky</file>
 
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
@@ -38,6 +39,7 @@
 		<properties>
 			<property name="text_domain" type="array">
 				<element value="moment"/>
+				<element value="moment-connector-bluesky"/>
 			</property>
 		</properties>
 	</rule>

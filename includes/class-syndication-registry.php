@@ -273,14 +273,22 @@ class Moment_Syndication_Registry {
 				'label'              => $connector ? $connector->get_label() : $connector_id,
 				'published_at'       => current_time( 'mysql' ),
 				'status'             => isset( $result['status'] ) ? (string) $result['status'] : 'mocked',
-				'backflow_supported' => false, // Set true when a real connector supports response import.
+				// Real connectors report backflow support in their publish result.
+				'backflow_supported' => ! empty( $result['backflow_supported'] ),
 			);
 		}
 
 		update_post_meta( $post_id, '_moment_external_posts', wp_json_encode( (object) $external_posts ) );
 
 		if ( $any_success ) {
-			update_post_meta( $post_id, '_moment_syndication_status', 'mocked' );
+			$statuses = wp_list_pluck( array_values( $results ), 'status' );
+
+			// A real publish outranks mocked ones for the overall status.
+			update_post_meta(
+				$post_id,
+				'_moment_syndication_status',
+				in_array( 'published', $statuses, true ) ? 'published' : 'mocked'
+			);
 		}
 	}
 }

@@ -50,6 +50,43 @@ wp plugin activate moment
 
 Then visit `/moment` on a phone-sized viewport while logged in.
 
+## FAQ
+
+### How do I connect Bluesky for bi-directional publishing?
+
+Moment's built-in connectors are mocked demos. The companion plugin
+**Moment Connector for Bluesky** (`moment-connector-bluesky/`, a separate
+plugin in this repo) replaces the Bluesky mock with the real thing —
+Moments publish to Bluesky, and replies flow back into WordPress as
+comments on the original Moment. Credentials are managed through the
+WordPress 7.0 **Connectors API**, so it feels core-native:
+
+1. **Activate both plugins** — `moment` and `moment-connector-bluesky`.
+2. **Create a Bluesky app password**: Bluesky → Settings → Privacy and
+   Security → [App Passwords](https://bsky.app/settings/app-passwords) →
+   Add App Password. Never use your main account password.
+3. **Enter the app password in WordPress**: wp-admin → Settings →
+   **Connectors** → Bluesky. (Core masks the stored key in REST
+   responses; you can also supply it via a `BLUESKY_APP_PASSWORD`
+   environment variable or PHP constant instead, which takes precedence
+   over the database value.)
+4. **Enter your handle**: wp-admin → Settings → **General** → "Bluesky
+   Handle" (e.g. `you.bsky.social`).
+5. **Publish**: in `/moment`, the Bluesky row on the publish screen now
+   shows **Connected**. Note and mixed Moments publish for real — the
+   caption plus a link back to your post, and the Bluesky post URL is
+   stored on the Moment (`_moment_external_posts`).
+6. **Pull replies back**: syncing responses (the
+   `POST /moment/v1/moments/{id}/sync-responses` endpoint the app uses)
+   fetches actual replies from your Bluesky thread and imports them as
+   WordPress comments labeled "Reply from Bluesky", deduplicated by
+   reply ID — safe to sync repeatedly. They appear on the post and in
+   `/moment/notifications`.
+
+If the connector is not configured (or a Bluesky call fails), publishing
+never blocks — the connector degrades to the same mocked behavior as the
+built-in demo connector.
+
 ## Using Moment Like a Phone App
 
 Moment is designed to sit on your phone's home screen like a native app.

@@ -296,6 +296,34 @@ class Moment_Notifications {
 				continue; // The Moment was never syndicated to this network.
 			}
 
+			/**
+			 * Allows a real connector plugin to handle response import for
+			 * a network instead of the mock importer.
+			 *
+			 * Return an array of imported comment IDs (may be empty) to mark
+			 * the network as handled; return null to fall through to the
+			 * mock importer. Handlers should call import_response() on the
+			 * passed notifications instance — it deduplicates per response
+			 * by `_moment_comment_external_id`, so real imports safely run
+			 * on every sync (no `_moment_backflow_synced_*` flag involved).
+			 *
+			 * @param array<int>|null      $handled       Imported comment IDs, or null when unhandled.
+			 * @param int                  $post_id       Moment post ID.
+			 * @param string               $network       Network ID, e.g. 'bluesky'.
+			 * @param array<string, mixed> $reference     External post reference for the network.
+			 * @param Moment_Notifications $notifications This instance, for import_response() calls.
+			 */
+			$handled = apply_filters( 'moment_import_network_responses', null, $post_id, $network, $external_posts[ $network ], $this );
+
+			if ( is_array( $handled ) ) {
+				$imported = array_merge( $imported, array_values( array_filter( $handled, 'is_int' ) ) );
+
+				/** This action is documented later in this method. */
+				do_action( 'moment_import_responses', $post_id, $network );
+
+				continue;
+			}
+
 			// Dedup guard: skip networks already synced for this post so
 			// repeated syncs don't pile up duplicate mock comments. This
 			// mirrors production deduplication, which would key on

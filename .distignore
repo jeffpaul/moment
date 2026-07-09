@@ -3,6 +3,7 @@
 .git
 .github
 bin
+moment-connector-bluesky
 node_modules
 project-moment
 tests
