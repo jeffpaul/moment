@@ -87,6 +87,28 @@ If the connector is not configured (or a Bluesky call fails), publishing
 never blocks — the connector degrades to the same mocked behavior as the
 built-in demo connector.
 
+### How do I connect Mastodon?
+
+Same model as Bluesky, via the companion plugin **Moment Connector for
+Mastodon** (`moment-connector-mastodon/`):
+
+1. **Activate both plugins** — `moment` and `moment-connector-mastodon`.
+2. **Create an access token on your instance**: Preferences →
+   Development → **New application** (any name; `read` and `write`
+   scopes) → copy the access token.
+3. **Enter the token in WordPress**: wp-admin → Settings →
+   **Connectors** → Mastodon. (Also accepted via a
+   `MASTODON_ACCESS_TOKEN` environment variable or PHP constant.)
+4. **Enter your instance**: wp-admin → Settings → **General** →
+   "Mastodon Instance" (e.g. `https://mastodon.social`).
+5. **Publish and sync** exactly as with Bluesky: note, image, and mixed
+   Moments post for real (caption + link), and syncing responses imports
+   direct replies to your status as comments labeled "Reply from
+   Mastodon", deduplicated per reply.
+
+The same never-blocks rule applies: unconfigured or failing, it falls
+back to mocked demo behavior.
+
 ## Using Moment Like a Phone App
 
 Moment is designed to sit on your phone's home screen like a native app.
