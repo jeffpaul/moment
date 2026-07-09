@@ -54,7 +54,8 @@
 
 .moment-badge {
 	align-self: flex-start;
-	background: rgba(0, 0, 0, 0.06);
+	background: rgba(122, 0, 223, 0.12);
+	color: #5300be;
 	border-radius: 999px;
 	font-size: 0.6875rem;
 	font-weight: 600;

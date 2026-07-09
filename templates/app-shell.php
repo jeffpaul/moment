@@ -111,7 +111,7 @@ $moment_config = array(
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 	<meta name="robots" content="noindex, nofollow" />
-	<meta name="theme-color" content="#1a1a1a" />
+	<meta name="theme-color" content="#7a00df" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 	<meta name="apple-mobile-web-app-title" content="Moment" />

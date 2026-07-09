@@ -5,7 +5,7 @@
 	"scope": "/moment",
 	"display": "standalone",
 	"background_color": "#ffffff",
-	"theme_color": "#1a1a1a",
+	"theme_color": "#7a00df",
 	"icons": [
 		{
 			"src": "/wp-content/plugins/moment/assets/icon.svg",
