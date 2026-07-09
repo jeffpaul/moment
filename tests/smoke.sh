@@ -7,7 +7,12 @@
 WP="${WP:-wp}"
 PASS=0
 FAIL=0
-export MOMENT_SMOKE_STATE="${MOMENT_SMOKE_STATE:-$(mktemp -t moment-smoke-state)}"
+# Portable mktemp: GNU requires an XXXXXX template (`-t name` is BSD/macOS-only).
+export MOMENT_SMOKE_STATE="${MOMENT_SMOKE_STATE:-$(mktemp "${TMPDIR:-/tmp}/moment-smoke-state.XXXXXX")}"
+if [ -z "$MOMENT_SMOKE_STATE" ]; then
+  echo "FATAL: could not create state temp file" >&2
+  exit 1
+fi
 echo '{}' > "$MOMENT_SMOKE_STATE"
 
 say()  { printf '\n=== %s ===\n' "$1"; }
