@@ -1,0 +1,141 @@
+name: WordPress Version Checker
+
+# Compares the declared "Tested up to" version against the latest WordPress
+# release. When WordPress ships a new version, opens a PR that:
+#   - bumps "Tested up to" to the new version (README.md)
+#   - bumps "Requires at least" to one release earlier (moment.php, README.md,
+#     phpcs.xml.dist) per the latest-and-latest-minus-one support policy
+# The PR then runs the full check suite so the bump is validated before merge.
+#
+# NOTE: PRs opened with the default GITHUB_TOKEN do not trigger pull_request
+# workflows (GitHub anti-recursion rule). Add a repo secret WPVC_TOKEN (a PAT
+# with repo scope) to have checks run automatically; without it, close and
+# reopen the PR once to kick off checks.
+#
+# The PHPUnit matrix pin in tests.yml is intentionally NOT bumped here — the
+# default token cannot push workflow-file changes. The PR body carries a
+# reminder to bump it in a follow-up commit on the PR branch.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      simulate_latest:
+        description: 'Pretend this is the latest WP version (testing only, e.g. 7.1)'
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  check-version:
+    name: Check tested-up-to against latest WordPress
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare versions and apply bumps
+        id: bump
+        env:
+          SIMULATE_LATEST: ${{ inputs.simulate_latest }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import re
+          import urllib.request
+
+          def parse(version):
+              parts = version.split('.')
+              return int(parts[0]), int(parts[1])
+
+          simulate = (os.environ.get('SIMULATE_LATEST') or '').strip()
+          if simulate:
+              latest = simulate
+          else:
+              with urllib.request.urlopen(
+                  'https://api.wordpress.org/core/version-check/1.7/'
+              ) as response:
+                  offer = json.load(response)['offers'][0]['version']
+              # Normalize 7.0.2 -> 7.0; "Tested up to" uses major.minor.
+              latest = '.'.join(offer.split('.')[:2])
+
+          readme = open('README.md').read()
+          match = re.search(r'\*\*Tested up to:\*\* (\d+\.\d+)', readme)
+          if not match:
+              raise SystemExit('Could not find "Tested up to" in README.md')
+          tested = match.group(1)
+
+          if parse(tested) >= parse(latest):
+              print(f'needs_bump=false')
+              print(f'latest={latest}')
+              raise SystemExit(print(f'# Up to date: tested {tested} >= latest {latest}') or 0)
+
+          major, minor = parse(latest)
+          # WordPress versioning: the release before X.0 is (X-1).9.
+          minimum = f'{major - 1}.9' if minor == 0 else f'{major}.{minor - 1}'
+
+          old_match = re.search(r'\*\*Requires at least:\*\* (\d+\.\d+)', readme)
+          if not old_match:
+              raise SystemExit('Could not find "Requires at least" in README.md')
+          old_minimum = old_match.group(1)
+
+          # README.md — header line + Requirements bullet.
+          readme = readme.replace(f'**Tested up to:** {tested}', f'**Tested up to:** {latest}')
+          readme = readme.replace(
+              f'**Requires at least:** {old_minimum}', f'**Requires at least:** {minimum}'
+          )
+          readme = readme.replace(f'- WordPress {old_minimum}+', f'- WordPress {minimum}+')
+          open('README.md', 'w').write(readme)
+
+          # moment.php — plugin header.
+          plugin = open('moment.php').read()
+          plugin = plugin.replace(
+              f' * Requires at least: {old_minimum}', f' * Requires at least: {minimum}'
+          )
+          open('moment.php', 'w').write(plugin)
+
+          # phpcs.xml.dist — WPCS minimum supported version.
+          phpcs = open('phpcs.xml.dist').read()
+          phpcs = phpcs.replace(
+              f'<config name="minimum_wp_version" value="{old_minimum}"/>',
+              f'<config name="minimum_wp_version" value="{minimum}"/>',
+          )
+          open('phpcs.xml.dist', 'w').write(phpcs)
+
+          print('needs_bump=true')
+          print(f'latest={latest}')
+          print(f'minimum={minimum}')
+          print(f'old_minimum={old_minimum}')
+          PY
+
+      - name: Open version bump PR
+        if: steps.bump.outputs.needs_bump == 'true'
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
+        with:
+          token: ${{ secrets.WPVC_TOKEN || github.token }}
+          branch: automated/wp-${{ steps.bump.outputs.latest }}-support
+          delete-branch: true
+          commit-message: |
+            Declare support for WordPress ${{ steps.bump.outputs.latest }}
+
+            Tested up to: ${{ steps.bump.outputs.latest }}; Requires at least
+            bumped ${{ steps.bump.outputs.old_minimum }} -> ${{ steps.bump.outputs.minimum }}
+            per the latest-and-latest-minus-one support policy.
+          title: 'Declare support for WordPress ${{ steps.bump.outputs.latest }}'
+          body: |
+            WordPress ${{ steps.bump.outputs.latest }} has been released. This automated PR:
+
+            - Bumps **Tested up to** to `${{ steps.bump.outputs.latest }}` (README.md)
+            - Bumps **Requires at least** from `${{ steps.bump.outputs.old_minimum }}` to `${{ steps.bump.outputs.minimum }}` (moment.php, README.md, phpcs.xml.dist)
+
+            **Before merging:**
+            - [ ] Let the full check suite pass (PHPUnit, smoke, browser E2E, PHPCS)
+            - [ ] Bump the PHPUnit matrix pin in `.github/workflows/tests.yml` from `${{ steps.bump.outputs.old_minimum }}`-era to `${{ steps.bump.outputs.latest }}` in a follow-up commit on this branch (workflow files cannot be modified by this automation)
+            - [ ] If checks did not start automatically, close and reopen this PR (PRs opened with the default token do not trigger workflows; add a `WPVC_TOKEN` repo secret to fix permanently)
+
+            🤖 Generated by the WordPress Version Checker workflow
