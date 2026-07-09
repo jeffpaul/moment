@@ -53,8 +53,9 @@ WP=/path/to/wp-cli-wrapper bash tests/smoke.sh
 # PHP linting (WordPress Coding Standards)
 composer phpcs
 
-# E2E tests (if Playwright configured)
-npx playwright test
+# Browser E2E (Playwright; needs a live site + admin creds)
+npm ci && npx playwright install chromium   # once per machine
+WP_BASE_URL=http://wp70.local WP_ADMIN_USER=<user> WP_ADMIN_PASS=<pass> npx playwright test
 
 # Watch for JS changes (if build step added)
 npm run start

@@ -88,3 +88,73 @@ jobs:
           printf '#!/bin/bash\nexec wp --path=/tmp/wp "$@"\n' > "$RUNNER_TEMP/wpx"
           chmod +x "$RUNNER_TEMP/wpx"
           WP="$RUNNER_TEMP/wpx" bash tests/smoke.sh
+
+  playwright:
+    name: Browser E2E (Playwright, WP nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP + WP-CLI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, gd
+          coverage: none
+          tools: wp-cli
+
+      - name: Install scratch WordPress (nightly)
+        run: |
+          wp core download --version=nightly --path=/tmp/wp
+          wp config create --path=/tmp/wp --dbname=wp_e2e --dbuser=root --dbpass=root --dbhost=127.0.0.1
+          wp core install --path=/tmp/wp --url=http://127.0.0.1:8889 --title=E2E \
+            --admin_user=admin --admin_password=admin --admin_email=admin@e2e.test --skip-email
+          # /moment and the section pages need pretty permalinks in a browser.
+          wp rewrite structure '/%postname%/' --path=/tmp/wp
+
+      - name: Link and activate the plugin
+        run: |
+          ln -s "$GITHUB_WORKSPACE" /tmp/wp/wp-content/plugins/moment
+          wp plugin activate moment --path=/tmp/wp
+          wp rewrite flush --path=/tmp/wp
+
+      - name: Start web server
+        run: |
+          wp server --host=127.0.0.1 --port=8889 --path=/tmp/wp &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8889/wp-login.php && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://127.0.0.1:8889/wp-login.php
+
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run browser E2E
+        env:
+          WP_BASE_URL: http://127.0.0.1:8889
+          WP_ADMIN_USER: admin
+          WP_ADMIN_PASS: admin
+        run: npx playwright test
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
