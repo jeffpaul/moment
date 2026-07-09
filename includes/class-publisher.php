@@ -1,0 +1,669 @@
+<?php
+/**
+ * Moment publisher.
+ *
+ * Creates the canonical Moment as a standard WordPress `post` (never a
+ * custom post type), attaches uploaded media, writes the _moment_*
+ * metadata, and fires `moment_published`.
+ *
+ * @package Moment
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Creates Moments as standard WordPress posts with attached media.
+ */
+class Moment_Publisher {
+
+	/**
+	 * Allowed primary Moment types.
+	 *
+	 * @var string[]
+	 */
+	public const PRIMARY_TYPES = array( 'image', 'video', 'audio', 'podcast', 'note', 'gallery', 'mixed' );
+
+	/**
+	 * Allowed MIME types for Moment media uploads.
+	 *
+	 * MIME must be validated against file content (finfo +
+	 * wp_check_filetype_and_ext()) before upload — never trust the file
+	 * extension alone.
+	 *
+	 * @var string[]
+	 */
+	public const ALLOWED_MIME_TYPES = array(
+		'image/jpeg',
+		'image/png',
+		'image/gif',
+		'image/webp',
+		'video/mp4',
+		'video/quicktime',
+		'audio/mpeg',
+		'audio/wav',
+	);
+
+	/**
+	 * Content-sniffed MIME aliases mapped to their canonical allowed type.
+	 *
+	 * finfo reports some formats with non-canonical names (e.g. WAV).
+	 *
+	 * @var array<string, string>
+	 */
+	private const MIME_ALIASES = array(
+		'audio/x-wav'  => 'audio/wav',
+		'audio/wave'   => 'audio/wav',
+		'audio/mp3'    => 'audio/mpeg',
+		'video/x-m4v'  => 'video/mp4',
+	);
+
+	/**
+	 * Publish a Moment.
+	 *
+	 * Validates and sideloads media, detects the primary Moment type,
+	 * creates a standard `post` with block markup, writes all `_moment_*`
+	 * metadata, and fires `moment_published`.
+	 *
+	 * @param array<string, mixed>                $data  Sanitized Moment input. Supported keys:
+	 *                                                   caption, title, primary_type,
+	 *                                                   syndication_targets, default_destinations,
+	 *                                                   ai_assist_used.
+	 * @param array<string, array<string, mixed>> $files $_FILES-style array of uploaded media.
+	 * @return int|WP_Error Post ID on success.
+	 */
+	public function publish( array $data, array $files = array() ) {
+		$caption = isset( $data['caption'] ) ? wp_kses_post( (string) $data['caption'] ) : '';
+		$caption = trim( $caption );
+
+		$file_list = $this->normalize_files( $files );
+
+		if ( empty( $file_list ) && '' === $caption ) {
+			return new WP_Error(
+				'moment_empty',
+				__( 'A Moment needs media or text.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Validate every file BEFORE uploading any of them.
+		foreach ( $file_list as $file ) {
+			$valid = $this->validate_file( $file );
+
+			if ( is_wp_error( $valid ) ) {
+				return $valid;
+			}
+		}
+
+		$media_ids = $this->sideload_files( $file_list );
+
+		if ( is_wp_error( $media_ids ) ) {
+			return $media_ids;
+		}
+
+		$requested_type = isset( $data['primary_type'] ) ? sanitize_key( (string) $data['primary_type'] ) : '';
+		$type           = $this->detect_primary_type( $media_ids, $requested_type );
+
+		$defaults = $this->sanitize_connector_ids( $data['default_destinations'] ?? array() );
+
+		if ( empty( $defaults ) ) {
+			$defaults = $this->get_registry_defaults( $type );
+		}
+
+		$raw_targets = $data['syndication_targets'] ?? null;
+		$targets     = $this->sanitize_connector_ids( $raw_targets ?? array() );
+
+		// Distinguish "no selection sent" (fall back to defaults) from an
+		// explicit empty selection (user deselected every destination).
+		$selection_provided = is_array( $raw_targets ) || ( is_string( $raw_targets ) && '' !== trim( $raw_targets ) );
+
+		if ( ! $selection_provided ) {
+			$targets = $defaults;
+		}
+
+		$title = isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '';
+
+		if ( '' === $title ) {
+			$title = $this->generate_title( $caption );
+		}
+
+		$post_data = array(
+			'post_type'    => 'post', // NEVER a custom post type — the Moment is a standard post.
+			'post_status'  => current_user_can( 'publish_posts' ) ? 'publish' : 'draft',
+			'post_author'  => get_current_user_id(),
+			'post_title'   => $title,
+			'post_content' => $this->build_block_markup( $media_ids, $caption ),
+			'post_excerpt' => wp_trim_words( wp_strip_all_tags( $caption ), 24, '…' ),
+		);
+
+		$post_id = wp_insert_post( $post_data, true );
+
+		if ( is_wp_error( $post_id ) ) {
+			// Clean up orphaned attachments so failed publishes leave no debris.
+			foreach ( $media_ids as $attachment_id ) {
+				wp_delete_attachment( $attachment_id, true );
+			}
+
+			$post_id->add_data( array( 'status' => 500 ) );
+
+			return $post_id;
+		}
+
+		$this->attach_media( $post_id, $media_ids, $type );
+
+		// Apply AI-Assist-accepted tags and alt text when provided.
+		$tags = array_filter( array_map( 'sanitize_text_field', (array) ( $data['tags'] ?? array() ) ) );
+		if ( $tags ) {
+			wp_set_post_tags( $post_id, $tags, true );
+		}
+
+		$alt_text = isset( $data['alt_text'] ) ? sanitize_text_field( (string) $data['alt_text'] ) : '';
+		if ( '' !== $alt_text && $media_ids ) {
+			$first_id = (int) $media_ids[0];
+			if ( wp_attachment_is_image( $first_id ) && '' === (string) get_post_meta( $first_id, '_wp_attachment_image_alt', true ) ) {
+				update_post_meta( $first_id, '_wp_attachment_image_alt', $alt_text );
+			}
+		}
+
+		$ai_assist_used = ! empty( $data['ai_assist_used'] ) ? '1' : '0';
+
+		update_post_meta( $post_id, '_moment_is_moment', '1' );
+		update_post_meta( $post_id, '_moment_primary_type', $type );
+		update_post_meta( $post_id, '_moment_media_ids', wp_json_encode( array_map( 'intval', $media_ids ) ) );
+		update_post_meta( $post_id, '_moment_syndication_targets', wp_json_encode( $targets ) );
+		update_post_meta( $post_id, '_moment_default_destinations', wp_json_encode( $defaults ) );
+		update_post_meta( $post_id, '_moment_syndication_status', 'not_attempted' );
+		update_post_meta( $post_id, '_moment_external_posts', wp_json_encode( (object) array() ) );
+		update_post_meta( $post_id, '_moment_comment_backflow_enabled', '1' );
+		update_post_meta( $post_id, '_moment_ai_assist_used', $ai_assist_used );
+		update_post_meta( $post_id, '_moment_created_from', 'mobile' );
+
+		$moment_data = array(
+			'post_id'              => $post_id,
+			'primary_type'         => $type,
+			'media_ids'            => array_map( 'intval', $media_ids ),
+			'caption'              => $caption,
+			'syndication_targets'  => $targets,
+			'default_destinations' => $defaults,
+			'post_status'          => get_post_status( $post_id ),
+			'ai_assist_used'       => $ai_assist_used,
+			'created_from'         => 'mobile',
+		);
+
+		/**
+		 * Fires after a Moment has been successfully created.
+		 *
+		 * @param int                  $post_id     The Moment post ID.
+		 * @param array<string, mixed> $moment_data Moment context data.
+		 */
+		do_action( 'moment_published', $post_id, $moment_data );
+
+		$this->maybe_syndicate( $post_id, $targets, $moment_data );
+
+		return $post_id;
+	}
+
+	/**
+	 * Normalize a $_FILES-style array into a flat list of single files.
+	 *
+	 * Handles both `moment_media` (single) and `moment_media[]` (PHP's
+	 * transposed multi-file structure), across any number of field names.
+	 *
+	 * @param array<string, array<string, mixed>> $files $_FILES-style array.
+	 * @return array<int, array<string, mixed>> Flat list of file arrays.
+	 */
+	private function normalize_files( array $files ): array {
+		$list = array();
+
+		foreach ( $files as $field ) {
+			if ( ! is_array( $field ) || ! isset( $field['name'] ) ) {
+				continue;
+			}
+
+			if ( is_array( $field['name'] ) ) {
+				foreach ( array_keys( $field['name'] ) as $i ) {
+					$list[] = array(
+						'name'     => (string) ( $field['name'][ $i ] ?? '' ),
+						'type'     => (string) ( $field['type'][ $i ] ?? '' ),
+						'tmp_name' => (string) ( $field['tmp_name'][ $i ] ?? '' ),
+						'error'    => (int) ( $field['error'][ $i ] ?? UPLOAD_ERR_NO_FILE ),
+						'size'     => (int) ( $field['size'][ $i ] ?? 0 ),
+					);
+				}
+			} else {
+				$list[] = array(
+					'name'     => (string) $field['name'],
+					'type'     => (string) ( $field['type'] ?? '' ),
+					'tmp_name' => (string) ( $field['tmp_name'] ?? '' ),
+					'error'    => (int) ( $field['error'] ?? UPLOAD_ERR_NO_FILE ),
+					'size'     => (int) ( $field['size'] ?? 0 ),
+				);
+			}
+		}
+
+		// Drop empty rows (e.g. an optional file input submitted with no file).
+		return array_values(
+			array_filter(
+				$list,
+				static function ( array $file ): bool {
+					return UPLOAD_ERR_NO_FILE !== $file['error'] && '' !== $file['tmp_name'];
+				}
+			)
+		);
+	}
+
+	/**
+	 * Validate a single uploaded file: upload status and real MIME type.
+	 *
+	 * MIME is validated from file CONTENT (finfo) and cross-checked with
+	 * wp_check_filetype_and_ext() — the extension alone is never trusted.
+	 *
+	 * @param array<string, mixed> $file Single $_FILES-style entry.
+	 * @return true|WP_Error
+	 */
+	private function validate_file( array $file ) {
+		if ( UPLOAD_ERR_OK !== $file['error'] ) {
+			return new WP_Error(
+				'moment_upload_error',
+				__( 'The file failed to upload.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( '' === $file['tmp_name'] || ! is_readable( $file['tmp_name'] ) ) {
+			return new WP_Error(
+				'moment_upload_error',
+				__( 'The uploaded file could not be read.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// 1) Content-based MIME sniff.
+		$finfo        = new finfo( FILEINFO_MIME_TYPE );
+		$content_mime = (string) $finfo->file( $file['tmp_name'] );
+		$content_mime = self::MIME_ALIASES[ $content_mime ] ?? $content_mime;
+
+		if ( ! in_array( $content_mime, self::ALLOWED_MIME_TYPES, true ) ) {
+			return new WP_Error(
+				'invalid_mime',
+				__( 'File type not allowed.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// 2) WordPress filename/extension cross-check.
+		$check      = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+		$check_mime = isset( $check['type'] ) ? (string) $check['type'] : '';
+		$check_mime = self::MIME_ALIASES[ $check_mime ] ?? $check_mime;
+
+		if ( '' === $check_mime || ! in_array( $check_mime, self::ALLOWED_MIME_TYPES, true ) ) {
+			return new WP_Error(
+				'invalid_mime',
+				__( 'File type not allowed.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Sideload validated files into the Media Library.
+	 *
+	 * Attachments are created unattached; attach_media() re-parents them
+	 * once the Moment post exists.
+	 *
+	 * @param array<int, array<string, mixed>> $file_list Validated file list.
+	 * @return int[]|WP_Error Attachment IDs.
+	 */
+	private function sideload_files( array $file_list ) {
+		if ( empty( $file_list ) ) {
+			return array();
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$media_ids = array();
+
+		foreach ( $file_list as $file ) {
+			$attachment_id = media_handle_sideload( $file, 0 );
+
+			if ( is_wp_error( $attachment_id ) ) {
+				// Roll back anything already sideloaded.
+				foreach ( $media_ids as $existing_id ) {
+					wp_delete_attachment( $existing_id, true );
+				}
+
+				$attachment_id->add_data( array( 'status' => 500 ) );
+
+				return $attachment_id;
+			}
+
+			$media_ids[] = (int) $attachment_id;
+		}
+
+		return $media_ids;
+	}
+
+	/**
+	 * Detect the primary Moment type from attached media.
+	 *
+	 * Rules: no media → note; 1 image → image; 2+ images → gallery;
+	 * video only → video; audio only → audio; mixed media → mixed.
+	 * An explicit valid override (e.g. `podcast`) wins.
+	 *
+	 * @param int[]  $media_ids      Attachment IDs.
+	 * @param string $requested_type Explicit override from input, if any.
+	 * @return string One of PRIMARY_TYPES.
+	 */
+	private function detect_primary_type( array $media_ids, string $requested_type = '' ): string {
+		if ( '' !== $requested_type && in_array( $requested_type, self::PRIMARY_TYPES, true ) ) {
+			return $requested_type;
+		}
+
+		$groups = $this->group_media_ids( $media_ids );
+
+		$has_image = ! empty( $groups['image'] );
+		$has_video = ! empty( $groups['video'] );
+		$has_audio = ! empty( $groups['audio'] );
+
+		if ( ! $has_image && ! $has_video && ! $has_audio ) {
+			return 'note';
+		}
+
+		if ( $has_image && ! $has_video && ! $has_audio ) {
+			return count( $groups['image'] ) > 1 ? 'gallery' : 'image';
+		}
+
+		if ( $has_video && ! $has_image && ! $has_audio ) {
+			return 'video';
+		}
+
+		if ( $has_audio && ! $has_image && ! $has_video ) {
+			return 'audio';
+		}
+
+		return 'mixed';
+	}
+
+	/**
+	 * Group attachment IDs by media kind.
+	 *
+	 * @param int[] $media_ids Attachment IDs.
+	 * @return array{image: int[], video: int[], audio: int[]}
+	 */
+	private function group_media_ids( array $media_ids ): array {
+		$groups = array(
+			'image' => array(),
+			'video' => array(),
+			'audio' => array(),
+		);
+
+		foreach ( $media_ids as $attachment_id ) {
+			$mime = (string) get_post_mime_type( $attachment_id );
+
+			if ( str_starts_with( $mime, 'image/' ) ) {
+				$groups['image'][] = (int) $attachment_id;
+			} elseif ( str_starts_with( $mime, 'video/' ) ) {
+				$groups['video'][] = (int) $attachment_id;
+			} elseif ( str_starts_with( $mime, 'audio/' ) ) {
+				$groups['audio'][] = (int) $attachment_id;
+			}
+		}
+
+		return $groups;
+	}
+
+	/**
+	 * Build standard block markup for the Moment content.
+	 *
+	 * Uses core/image, core/gallery, core/video, core/audio, and
+	 * core/paragraph so the Moment renders in any theme.
+	 *
+	 * @param int[]  $media_ids Attachment IDs.
+	 * @param string $caption   Caption text (already run through wp_kses_post).
+	 * @return string Block markup.
+	 */
+	private function build_block_markup( array $media_ids, string $caption ): string {
+		$groups = $this->group_media_ids( $media_ids );
+		$blocks = array();
+
+		if ( count( $groups['image'] ) > 1 ) {
+			$blocks[] = $this->build_gallery_block( $groups['image'] );
+		} elseif ( 1 === count( $groups['image'] ) ) {
+			$blocks[] = $this->build_image_block( $groups['image'][0] );
+		}
+
+		foreach ( $groups['video'] as $video_id ) {
+			$blocks[] = $this->build_video_block( $video_id );
+		}
+
+		foreach ( $groups['audio'] as $audio_id ) {
+			$blocks[] = $this->build_audio_block( $audio_id );
+		}
+
+		if ( '' !== $caption ) {
+			foreach ( preg_split( '/\n\s*\n/', $caption ) as $chunk ) {
+				$chunk = trim( $chunk );
+
+				if ( '' === $chunk ) {
+					continue;
+				}
+
+				$blocks[] = sprintf(
+					"<!-- wp:paragraph -->\n<p>%s</p>\n<!-- /wp:paragraph -->",
+					wp_kses_post( $chunk )
+				);
+			}
+		}
+
+		return implode( "\n\n", $blocks );
+	}
+
+	/**
+	 * Build a core/image block for an attachment.
+	 *
+	 * @param int $attachment_id Image attachment ID.
+	 * @return string Block markup.
+	 */
+	private function build_image_block( int $attachment_id ): string {
+		$url = wp_get_attachment_image_url( $attachment_id, 'large' );
+
+		if ( ! $url ) {
+			$url = (string) wp_get_attachment_url( $attachment_id );
+		}
+
+		$alt = (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+
+		return sprintf(
+			"<!-- wp:image {\"id\":%1\$d,\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n" .
+			"<figure class=\"wp-block-image size-large\"><img src=\"%2\$s\" alt=\"%3\$s\" class=\"wp-image-%1\$d\"/></figure>\n" .
+			'<!-- /wp:image -->',
+			$attachment_id,
+			esc_url( $url ),
+			esc_attr( $alt )
+		);
+	}
+
+	/**
+	 * Build a core/gallery block wrapping core/image blocks.
+	 *
+	 * @param int[] $image_ids Image attachment IDs.
+	 * @return string Block markup.
+	 */
+	private function build_gallery_block( array $image_ids ): string {
+		$inner = array();
+
+		foreach ( $image_ids as $image_id ) {
+			$inner[] = $this->build_image_block( $image_id );
+		}
+
+		return sprintf(
+			"<!-- wp:gallery {\"linkTo\":\"none\"} -->\n" .
+			"<figure class=\"wp-block-gallery has-nested-images columns-default is-cropped\">%s</figure>\n" .
+			'<!-- /wp:gallery -->',
+			implode( "\n\n", $inner )
+		);
+	}
+
+	/**
+	 * Build a core/video block for an attachment.
+	 *
+	 * @param int $attachment_id Video attachment ID.
+	 * @return string Block markup.
+	 */
+	private function build_video_block( int $attachment_id ): string {
+		return sprintf(
+			"<!-- wp:video {\"id\":%1\$d} -->\n" .
+			"<figure class=\"wp-block-video\"><video controls src=\"%2\$s\"></video></figure>\n" .
+			'<!-- /wp:video -->',
+			$attachment_id,
+			esc_url( (string) wp_get_attachment_url( $attachment_id ) )
+		);
+	}
+
+	/**
+	 * Build a core/audio block for an attachment.
+	 *
+	 * @param int $attachment_id Audio attachment ID.
+	 * @return string Block markup.
+	 */
+	private function build_audio_block( int $attachment_id ): string {
+		return sprintf(
+			"<!-- wp:audio {\"id\":%1\$d} -->\n" .
+			"<figure class=\"wp-block-audio\"><audio controls src=\"%2\$s\"></audio></figure>\n" .
+			'<!-- /wp:audio -->',
+			$attachment_id,
+			esc_url( (string) wp_get_attachment_url( $attachment_id ) )
+		);
+	}
+
+	/**
+	 * Attach media to the Moment post and set the featured image.
+	 *
+	 * @param int    $post_id   Moment post ID.
+	 * @param int[]  $media_ids Attachment IDs.
+	 * @param string $type      Primary Moment type.
+	 * @return void
+	 */
+	private function attach_media( int $post_id, array $media_ids, string $type ): void {
+		foreach ( $media_ids as $attachment_id ) {
+			wp_update_post(
+				array(
+					'ID'          => $attachment_id,
+					'post_parent' => $post_id,
+				)
+			);
+		}
+
+		if ( ! in_array( $type, array( 'image', 'gallery' ), true ) ) {
+			return;
+		}
+
+		$groups = $this->group_media_ids( $media_ids );
+
+		if ( ! empty( $groups['image'] ) ) {
+			set_post_thumbnail( $post_id, $groups['image'][0] );
+		}
+	}
+
+	/**
+	 * Generate a post title from the caption (first ~8 words) or a
+	 * timestamp fallback like "Moment — March 3, 2026 4:12 pm".
+	 *
+	 * @param string $caption Caption text.
+	 * @return string Title.
+	 */
+	private function generate_title( string $caption ): string {
+		$plain = trim( wp_strip_all_tags( $caption ) );
+
+		if ( '' !== $plain ) {
+			return wp_trim_words( $plain, 8, '…' );
+		}
+
+		return sprintf(
+			/* translators: 1: localized date, 2: localized time. */
+			__( 'Moment — %1$s %2$s', 'moment' ),
+			wp_date( get_option( 'date_format', 'F j, Y' ) ),
+			wp_date( get_option( 'time_format', 'g:i a' ) )
+		);
+	}
+
+	/**
+	 * Sanitize a list of connector IDs.
+	 *
+	 * Accepts an array, a JSON-encoded string, or a comma-separated
+	 * string (multipart form fields arrive as strings).
+	 *
+	 * @param mixed $raw Raw input.
+	 * @return string[] Sanitized connector IDs.
+	 */
+	private function sanitize_connector_ids( $raw ): array {
+		if ( is_string( $raw ) && '' !== trim( $raw ) ) {
+			$decoded = json_decode( $raw, true );
+			$raw     = is_array( $decoded ) ? $decoded : explode( ',', $raw );
+		}
+
+		if ( ! is_array( $raw ) ) {
+			return array();
+		}
+
+		$ids = array();
+
+		foreach ( $raw as $id ) {
+			if ( ! is_scalar( $id ) ) {
+				continue;
+			}
+
+			$id = sanitize_key( (string) $id );
+
+			if ( '' !== $id ) {
+				$ids[] = $id;
+			}
+		}
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	/**
+	 * Get default destinations for a type from the syndication registry.
+	 *
+	 * @param string $type Primary Moment type.
+	 * @return string[] Connector IDs.
+	 */
+	private function get_registry_defaults( string $type ): array {
+		if ( ! class_exists( 'Moment_Plugin' ) ) {
+			return array();
+		}
+
+		$registry = Moment_Plugin::instance()->syndication_registry;
+
+		return $this->sanitize_connector_ids( $registry->get_default_destinations( $type ) );
+	}
+
+	/**
+	 * Defensively hand off to the syndication registry (Phase 5).
+	 *
+	 * Selection is stored as meta regardless; if the registry gains a
+	 * publish_to_targets() method in Phase 5, it is invoked here.
+	 *
+	 * @param int                  $post_id     Moment post ID.
+	 * @param string[]             $targets     Selected connector IDs.
+	 * @param array<string, mixed> $moment_data Moment context data.
+	 * @return void
+	 */
+	private function maybe_syndicate( int $post_id, array $targets, array $moment_data ): void {
+		if ( empty( $targets ) || ! class_exists( 'Moment_Plugin' ) ) {
+			return;
+		}
+
+		$registry = Moment_Plugin::instance()->syndication_registry;
+
+		if ( method_exists( $registry, 'publish_to_targets' ) ) {
+			$registry->publish_to_targets( $post_id, $targets, $moment_data );
+		}
+	}
+}

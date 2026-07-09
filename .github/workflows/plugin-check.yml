@@ -1,0 +1,26 @@
+name: Plugin Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    # Advisory for the prototype: surfaces findings in the run log without
+    # blocking merges. Flip to blocking before any public/dot-org release.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build distribution copy (respects .distignore)
+        run: |
+          mkdir -p /tmp/dist/moment
+          rsync -a --exclude-from=.distignore --exclude='.git' ./ /tmp/dist/moment/
+
+      - name: Run plugin check
+        uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: /tmp/dist/moment

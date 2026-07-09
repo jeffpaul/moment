@@ -1,0 +1,23 @@
+# Directories
+.claude
+.git
+.github
+node_modules
+project-moment
+tests
+vendor
+
+# Files
+.DS_Store
+.distignore
+.gitignore
+CLAUDE.md
+composer.json
+composer.lock
+package.json
+package-lock.json
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
+playwright.config.js

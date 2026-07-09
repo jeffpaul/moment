@@ -1,0 +1,49 @@
+<?php
+/**
+ * PHPUnit bootstrap for the Moment plugin.
+ *
+ * Requires the WordPress PHPUnit test library. Set WP_TESTS_DIR or install
+ * to /tmp/wordpress-tests-lib.
+ *
+ * @package Moment
+ */
+
+$_tests_dir = getenv( 'WP_TESTS_DIR' );
+
+if ( ! $_tests_dir ) {
+	$_tests_dir = rtrim( sys_get_temp_dir(), '/\\' ) . '/wordpress-tests-lib';
+}
+
+if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
+	fwrite(
+		STDERR,
+		"SKIPPED: WordPress test library not found at {$_tests_dir}.\n\n"
+		. "Install it with:\n"
+		. "  bash bin/install-wp-tests.sh wordpress_test root '' localhost latest\n"
+		. "or download the WP develop suite and set WP_TESTS_DIR, e.g.:\n"
+		. "  svn co https://develop.svn.wordpress.org/tags/6.8/tests/phpunit/includes/ /tmp/wordpress-tests-lib/includes\n"
+		. "  svn co https://develop.svn.wordpress.org/tags/6.8/tests/phpunit/data/ /tmp/wordpress-tests-lib/data\n"
+		. "  (plus a wp-tests-config.php pointing at a scratch database)\n"
+		. "Then run: WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test\n"
+	);
+	exit( 1 );
+}
+
+// Polyfills for cross-PHPUnit-version compatibility (required by the WP suite).
+$_polyfills = dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php';
+
+if ( file_exists( $_polyfills ) ) {
+	define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills' );
+}
+
+require_once $_tests_dir . '/includes/functions.php';
+
+/**
+ * Manually load the Moment plugin.
+ */
+function _moment_manually_load_plugin() {
+	require dirname( __DIR__ ) . '/moment.php';
+}
+tests_add_filter( 'muplugins_loaded', '_moment_manually_load_plugin' );
+
+require $_tests_dir . '/includes/bootstrap.php';

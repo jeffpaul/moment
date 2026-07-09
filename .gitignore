@@ -1,0 +1,15 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Test artifacts
+composer.lock
+.phpunit.result.cache
+test-results/
+playwright-report/
+
+# OS noise
+.DS_Store
+
+# Machine-local Claude Code settings
+.claude/settings.local.json

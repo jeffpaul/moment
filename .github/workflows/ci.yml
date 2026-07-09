@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  php-lint:
+    name: PHP syntax (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # "Requires PHP: 8.1" per the plugin header, through current stable.
+        php: ['8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Lint all PHP files
+        run: |
+          set -e
+          find . -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -print0 | xargs -0 -n1 php -l
+
+  asset-checks:
+    name: JSON + JS syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON (block.json, manifest.json, composer.json)
+        run: |
+          set -e
+          find . -name '*.json' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -print0 | xargs -0 -n1 -I{} sh -c 'jq empty "{}" && echo "OK {}"'
+
+      - name: JS syntax check (no build step — vanilla ES2020)
+        run: |
+          set -e
+          find assets -name '*.js' -print0 | xargs -0 -n1 node --check

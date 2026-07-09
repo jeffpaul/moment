@@ -1,0 +1,184 @@
+# Project Moment — CLAUDE.md
+# Claude Code project memory for the Moment WordPress plugin prototype.
+# Place this file in your WordPress installation root (same level as wp-config.php).
+# Update bracketed values after Phase 0 environment checks.
+
+## Plugin identity
+
+| Key | Value |
+|-----|-------|
+| Public product name | Project Moment |
+| Plugin name | Moment |
+| Plugin slug | `moment` |
+| Plugin directory | `moment/` |
+| Main plugin file | `moment/moment.php` |
+| Text domain | `moment` |
+| REST namespace | `/wp-json/moment/v1/` |
+| Block namespace | `moment/*` |
+| PHP class prefix | `Moment_` |
+| PHP namespace | `Moment\` (optional alternative) |
+| Action/filter prefix | `moment_` |
+| Shortcode prefix | `moment_` |
+
+**NEVER use in code**: `project-moment`, `project_moment`, `projectmoment`
+
+## Environment
+
+| Key | Value |
+|-----|-------|
+| WordPress version | 7.0-beta3-61869 |
+| PHP version | 8.2.27 (site) / 8.5.7 (CLI) |
+| WP 7.0 AI Client available | **yes** — via `ai` plugin 0.4.1: class is `WordPress\AiClient\AiClient` (namespaced; the legacy `WP_AI_Client` name does NOT exist). Anthropic/Google/OpenAI provider plugins active. |
+| Site URL | http://wp70.local |
+| Plugin path | ~/Local Sites/wp70/app/public/wp-content/plugins/moment (symlink → ~/GitHub/jeffpaul/moment) |
+| Local environment | Local by Flywheel (site: wp70) |
+
+**Repo layout note:** This repo root IS the plugin. `moment.php` lives at the repo root, and the repo is symlinked into the wp70 site's plugins directory as `moment/`. The `project-moment/` docs and `.claude/` are excluded from distribution via `.distignore`. Runtime gates (`wp plugin activate`, `wp eval`) run from `~/Local Sites/wp70/app/public` and require the wp70 site to be started in Local.
+
+## Build commands
+
+```bash
+# Activate/deactivate
+wp plugin activate moment
+wp plugin deactivate moment
+
+# PHP tests
+cd wp-content/plugins/moment
+composer install
+WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test
+
+# PHP linting (WordPress Coding Standards)
+composer phpcs
+
+# E2E tests (if Playwright configured)
+npx playwright test
+
+# Watch for JS changes (if build step added)
+npm run start
+
+# Production build (if build step added)
+npm run build
+```
+
+## Phase status
+
+Update this after each phase completes. Do not mark DONE unless the phase gate passed.
+
+- [x] Phase 0: Environment + CLAUDE.md verified (AI Client runtime check deferred to Phase 4 — requires wp70 running)
+- [x] Phase 1: Plugin scaffold + activation (gate PASSED: activated cleanly; Moment_Plugin exists; 5 section pages created; /moment redirects unauthenticated → wp-login)
+- [x] Phase 2: REST API + publisher (gate PASSED: unauthenticated GET /moments → 401; all 5 routes registered; note-Moment publish smoke test created post with full meta)
+- [x] Phase 3: Frontend app shell (gate PASSED: authenticated /moment → 200, `<title>Moment</title>`, momentApp config inlined, zero wp-admin/admin-bar references)
+- [x] Phase 4: AI Assist adapter (gate PASSED: all keys present; REAL path live — Anthropic via core AI Client; mock fallback deterministic under wp_supports_ai=false)
+- [x] Phase 5: Syndication routing + connectors (gate PASSED: image→instagram + note→bluesky defaults; 7 connectors registered; mock publish round-trip stores _moment_external_posts and sets status to 'mocked')
+- [x] Phase 6: Conversation backflow + notifications (gate PASSED + independently re-verified: sync imports labeled mock replies as standard WP comments; repeat sync deduped; notifications include 'Reply from Bluesky' item and exclude non-Moment post comments; non-Moment sync → 404)
+- [x] Phase 7: Blocks and shortcodes (gate PASSED: all 5 shortcodes + all 5 moment/* dynamic blocks registered; /timeline page renders Moments; shortcode and block output byte-identical via shared renderer)
+- [x] Phase 8: PWA + home screen (gate PASSED: manifest reachable + valid JSON; icon-192/512 PNGs generated from icon.svg and served 200; conservative SW at assets/moment-sw.js — caches only app.css/app.js, never REST/nonces/admin/HTML)
+- [x] Phase 9: E2E tests (gate PASSED: WP-CLI smoke suite tests/smoke.sh 57/57 against live wp70; PHPUnit scaffolded — needs WP test lib (`WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test`); Playwright scaffolded, not run — needs `npm i -D @playwright/test && npx playwright install chromium`)
+
+## Key architectural decisions
+
+Document decisions here as they are made. This is the authoritative record.
+
+| Decision | Value | Rationale |
+|----------|-------|-----------|
+| Content model | Standard `post` post type | Portability; standard feeds/comments/templates |
+| Custom post type | Not used | Deactivation safety; standard theme compat |
+| Route strategy | Rewrite rule + `template_include` on a `moment_app` query var | No page dependency; full control of app-shell markup (no theme chrome); clean `/moment` PWA scope. Section pages (`/timeline`, `/images`, `/videos`, `/audio`, `/notes`) are auto-created pages with shortcodes since those should render inside the theme. |
+| Block vs shortcode | **Both** — shortcodes as required baseline, dynamic blocks (`block.json` + `render.php`, no build step) as thin wrappers | Activation pages already embed `[moment_*]` shortcodes; MVP spec requires both; all query/markup logic lives once in `Moment_Renderer::render()` so both surfaces emit identical HTML |
+| WP 7.0 AI path | **Real** — `WordPress\AiClient\AiClient` via `wp_ai_client_prompt()`; provider Anthropic (first configured). Mock fallback on any failure/unavailability. | AI Client is bundled in wp-includes on WP 7.0-beta3 and three providers are configured on wp70. Detection: class exists + `wp_supports_ai()` + ≥1 `isProviderConfigured()`. Never throws, never blocks publishing. Legacy `WP_AI_Client` name does not exist — do not use it for calls. |
+| JS framework | Vanilla ES2020, no build step | Prototype speed; no npm required |
+
+## Content model quick reference
+
+```php
+// Required post fields
+post_type    = 'post'                     // NEVER 'moment' custom type
+post_status  = 'publish' or 'draft'       // based on capability
+post_title   = generated from caption     // or timestamp fallback
+post_content = block markup               // core/image, core/video, etc.
+
+// Required post meta
+_moment_is_moment              = '1'
+_moment_primary_type           = image|video|audio|podcast|note|gallery|mixed
+_moment_media_ids              = JSON array of attachment IDs
+_moment_syndication_targets    = JSON array of selected connector IDs
+_moment_default_destinations   = JSON array of default connector IDs
+_moment_syndication_status     = not_attempted|mocked|queued|published|failed
+_moment_external_posts         = JSON object of external post references
+_moment_comment_backflow_enabled = '1' or '0'
+_moment_ai_assist_used         = '0' or '1'
+_moment_created_from           = 'mobile'
+```
+
+## Action hooks (must fire in correct order)
+
+```php
+do_action('moment_register_connectors', $registry);  // on init
+do_action('moment_published', $post_id, $moment_data);  // after successful post creation
+do_action('moment_syndication_complete', $post_id, $results);  // after connector publish
+do_action('moment_import_responses', $post_id, $network_id);  // backflow trigger
+```
+
+## REST endpoints
+
+| Method | Path | Auth required |
+|--------|------|--------------|
+| POST | `/moment/v1/moments` | Yes — edit_posts + nonce |
+| GET | `/moment/v1/moments` | Yes — edit_posts + nonce |
+| POST | `/moment/v1/ai/suggestions` | Yes — edit_posts + nonce |
+| POST | `/moment/v1/moments/{id}/sync-responses` | Yes — edit_posts + nonce |
+| GET | `/moment/v1/notifications` | Yes — edit_posts + nonce |
+
+## Security checklist (apply to every endpoint and form handler)
+
+- [ ] `current_user_can()` before any write
+- [ ] Nonce verified via `X-WP-Nonce` header
+- [ ] Inputs sanitized with `sanitize_text_field()` / `wp_kses_post()` / `absint()`
+- [ ] MIME type validated before `wp_handle_upload()` — not just extension
+- [ ] All output escaped with `esc_html()` / `esc_attr()` / `esc_url()`
+- [ ] No direct DB queries without `$wpdb->prepare()`
+- [ ] No unauthenticated publishing endpoints
+
+## Sub-agent directory
+
+These agents are defined in `.claude/agents/`. The orchestrator delegates to them by name.
+
+| Agent | File | Scope |
+|-------|------|-------|
+| `wp-php-core` | `.claude/agents/wp-php-core.md` | PHP, REST API, publisher, AI adapter |
+| `moment-frontend` | `.claude/agents/moment-frontend.md` | App shell, screens, CSS, JS, PWA |
+| `moment-syndication` | `.claude/agents/moment-syndication.md` | Connector registry, routing, metadata |
+| `moment-backflow` | `.claude/agents/moment-backflow.md` | Backflow import, notifications endpoint |
+| `moment-tester` | `.claude/agents/moment-tester.md` | PHPUnit, WP-CLI smoke tests, Playwright |
+
+## Project artifact context
+
+These files are loaded into context at session start. All are in the project-moment/ directory.
+
+| File | Purpose |
+|------|---------|
+| `00_README.md` | Architecture overview |
+| `02_one_page_product_brief.md` | Product shape |
+| `04_prototype_mvp_spec.md` | MVP scope and non-goals |
+| `08_decisions_and_open_questions.md` | Resolved constraints |
+| `09_default_syndication_routing.md` | Routing model |
+| `11_conversation_backflow_notifications.md` | Backflow product model |
+| `12_content_model_technical_path.md` | Content model |
+| `13_success_metrics_and_e2e_tests.md` | Acceptance tests |
+
+## Non-goals (never build these in the prototype)
+
+- Real social API publishing
+- Real social comment/reply polling or webhooks
+- Custom post type (unless hard constraint appears)
+- AI provider API key storage
+- Plugin marketplace or settings dashboard
+- wp-admin chrome or site management features in Moment UI
+- Multi-user or team workflows beyond standard WordPress roles
+- Full offline PWA mode (manifest + conservative service worker only)
+- Push notifications
+
+## Strategic line
+
+WordPress does not need to become a social network.
+It needs to become the best place for social-shaped content to begin.

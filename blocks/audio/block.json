@@ -1,0 +1,22 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "moment/audio",
+	"title": "Moment Audio",
+	"category": "widgets",
+	"icon": "format-audio",
+	"description": "Displays published audio and podcast Moments.",
+	"keywords": [ "moment", "audio", "podcast" ],
+	"textdomain": "moment",
+	"attributes": {
+		"count": {
+			"type": "integer",
+			"default": 10
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"render": "file:./render.php"
+}

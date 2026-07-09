@@ -1,0 +1,22 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "moment/images",
+	"title": "Moment Images",
+	"category": "widgets",
+	"icon": "format-image",
+	"description": "Displays published image, gallery, and mixed Moments.",
+	"keywords": [ "moment", "images", "photos", "gallery" ],
+	"textdomain": "moment",
+	"attributes": {
+		"count": {
+			"type": "integer",
+			"default": 10
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"render": "file:./render.php"
+}
