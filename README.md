@@ -13,6 +13,30 @@ source of truth.
 **Status:** prototype. App shell, REST API, and home-screen/PWA support
 are in place; see "Using Moment Like a Phone App" below.
 
+## Colors
+
+The Moment brand palette is a range of purples:
+
+| Token | Value | Use |
+|---|---|---|
+| Primary purple | `#7A00DF` | Primary actions, accents, brand marks |
+| Deep purple | `#5300BE` | Pressed/hover states, emphasis, dark surfaces |
+| Light purple | `#D7A7FF` | Tints, highlights, chips, subtle backgrounds |
+| Transparent purple | `rgba(122, 0, 223, 0.12)` | Washes, focus rings, selected states |
+
+> The prototype app shell currently ships a neutral near-black palette in
+> `assets/app.css` (see the `--moment-*` custom properties); these purples are
+> the documented brand direction to migrate toward.
+
+## AI-assisted development
+
+This plugin was generated with [Claude Code](https://claude.com/claude-code)
+working from the Project Moment specification documents, with human guidance,
+review, and testing throughout — every build phase was gated on verification
+against a live WordPress site, and the test suites (PHPUnit, WP-CLI smoke,
+browser E2E) exist to keep that review honest. Treat it as an AI-generated,
+human-directed prototype.
+
 ## Requirements
 
 - WordPress 7.0+ (the bundled AI Client powers optional AI Assist; publishing never requires a configured AI provider)

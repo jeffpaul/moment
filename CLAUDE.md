@@ -91,6 +91,7 @@ Document decisions here as they are made. This is the authoritative record.
 | Block vs shortcode | **Both** — shortcodes as required baseline, dynamic blocks (`block.json` + `render.php`, no build step) as thin wrappers | Activation pages already embed `[moment_*]` shortcodes; MVP spec requires both; all query/markup logic lives once in `Moment_Renderer::render()` so both surfaces emit identical HTML |
 | WP 7.0 AI path | **Real** — `WordPress\AiClient\AiClient` via `wp_ai_client_prompt()`; provider Anthropic (first configured). Mock fallback when no provider is configured or any call fails. | Plugin requires WP 7.0+, so the AI Client is assumed present (no class/function existence shims). Detection: `wp_supports_ai()` + ≥1 `isProviderConfigured()`. Never throws, never blocks publishing. Legacy `WP_AI_Client` name does not exist — do not use it for calls. |
 | JS framework | Vanilla ES2020, no build step | Prototype speed; no npm required |
+| Brand colors | Purples: primary `#7A00DF`, deep `#5300BE`, light `#D7A7FF`, transparent `rgba(122, 0, 223, 0.12)` | Documented in README "Colors". The app shell's `--moment-*` custom props in assets/app.css still use the original neutral palette — migrate accents/theme-color/manifest/icon toward these purples when restyling. |
 
 ## Content model quick reference
 
