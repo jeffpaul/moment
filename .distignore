@@ -2,6 +2,7 @@
 .claude
 .git
 .github
+bin
 node_modules
 project-moment
 tests

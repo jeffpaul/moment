@@ -1,0 +1,90 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  phpunit:
+    name: PHPUnit (WP nightly, PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.4']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, gd
+          coverage: none
+          tools: composer
+
+      - name: Install WordPress test library (nightly)
+        run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 nightly true
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run PHPUnit
+        run: WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test
+
+  smoke:
+    name: Smoke suite (WP nightly, live install)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp_smoke
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP + WP-CLI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, gd
+          coverage: none
+          tools: wp-cli
+
+      - name: Install scratch WordPress (nightly)
+        run: |
+          wp core download --version=nightly --path=/tmp/wp
+          wp config create --path=/tmp/wp --dbname=wp_smoke --dbuser=root --dbpass=root --dbhost=127.0.0.1
+          wp core install --path=/tmp/wp --url=http://smoke.test --title=Smoke \
+            --admin_user=admin --admin_password=admin --admin_email=admin@smoke.test --skip-email
+
+      - name: Link and activate the plugin
+        run: |
+          ln -s "$GITHUB_WORKSPACE" /tmp/wp/wp-content/plugins/moment
+          wp plugin activate moment --path=/tmp/wp
+
+      - name: Run smoke suite (57 assertions, E2E scenarios 1-10)
+        run: |
+          printf '#!/bin/bash\nexec wp --path=/tmp/wp "$@"\n' > "$RUNNER_TEMP/wpx"
+          chmod +x "$RUNNER_TEMP/wpx"
+          WP="$RUNNER_TEMP/wpx" bash tests/smoke.sh

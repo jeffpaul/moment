@@ -42,10 +42,13 @@
 wp plugin activate moment
 wp plugin deactivate moment
 
-# PHP tests
-cd wp-content/plugins/moment
+# PHP tests (from the repo root)
 composer install
-WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test
+bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 nightly   # once per machine
+WP_TESTS_DIR=$TMPDIR/wordpress-tests-lib composer test   # macOS ($TMPDIR); /tmp on Linux/CI
+
+# WP-CLI smoke suite (57 assertions) against a live site with the plugin active
+WP=/path/to/wp-cli-wrapper bash tests/smoke.sh
 
 # PHP linting (WordPress Coding Standards)
 composer phpcs

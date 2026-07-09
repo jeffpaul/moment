@@ -18,13 +18,11 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 	fwrite(
 		STDERR,
 		"SKIPPED: WordPress test library not found at {$_tests_dir}.\n\n"
-		. "Install it with:\n"
-		. "  bash bin/install-wp-tests.sh wordpress_test root '' localhost latest\n"
-		. "or download the WP develop suite and set WP_TESTS_DIR, e.g.:\n"
-		. "  svn co https://develop.svn.wordpress.org/tags/6.8/tests/phpunit/includes/ /tmp/wordpress-tests-lib/includes\n"
-		. "  svn co https://develop.svn.wordpress.org/tags/6.8/tests/phpunit/data/ /tmp/wordpress-tests-lib/data\n"
-		. "  (plus a wp-tests-config.php pointing at a scratch database)\n"
-		. "Then run: WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test\n"
+		. "Install it with (nightly required while the plugin targets WP 7.0 pre-release):\n"
+		. "  bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1 nightly\n"
+		. "Then run:\n"
+		. "  WP_TESTS_DIR=\$TMPDIR/wordpress-tests-lib composer test   # macOS\n"
+		. "  WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test      # Linux/CI\n"
 	);
 	exit( 1 );
 }
