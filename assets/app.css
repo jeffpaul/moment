@@ -755,6 +755,17 @@ h2[tabindex='-1']:focus {
 	cursor: default;
 }
 
+/* Connector can't represent the current Moment type (e.g. a note to
+   Instagram): visible but not selectable. */
+.moment-dest--unsupported {
+	background: var(--moment-surface);
+}
+
+.moment-dest--unsupported .moment-dest__row {
+	cursor: default;
+	opacity: 0.55;
+}
+
 .moment-dest__info {
 	flex: 1;
 	min-width: 0;

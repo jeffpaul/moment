@@ -685,26 +685,58 @@
 
 	// --- Screen: Publish ---
 
+	// Why a connector can't take the current Moment type, phrased by what
+	// it does accept ("Needs video" for YouTube/TikTok, "Needs an image"
+	// for Instagram).
+	function unsupportedReason(connector) {
+		const supports = Array.isArray(connector.supports) ? connector.supports : [];
+		if (supports.includes('video') && !supports.includes('image')) {
+			return 'Needs video';
+		}
+		if (supports.includes('image') && !supports.includes('note')) {
+			return 'Needs an image';
+		}
+		return 'Unavailable';
+	}
+
+	function connectorSupportsType(connector, type) {
+		// No declared capabilities = assume everything (defensive default).
+		return !Array.isArray(connector.supports) || connector.supports.includes(type);
+	}
+
 	const PublishScreen = {
 		render() {
+			// Never carry an impossible target into a publish (e.g. after
+			// going back and swapping a photo for plain text).
+			state.targets = state.targets.filter((id) => {
+				const connector = connectors.find((c) => c.id === id);
+				return !connector || connectorSupportsType(connector, state.primaryType);
+			});
+
 			const rows = connectors
 				.map((connector) => {
-					const checked = state.targets.includes(connector.id) ? ' checked' : '';
+					const supported = connectorSupportsType(connector, state.primaryType);
+					const checked = supported && state.targets.includes(connector.id) ? ' checked' : '';
+					const chip = supported
+						? `<span class="moment-chip ${connector.connected ? 'moment-chip--success' : 'moment-chip--muted'}">${esc(
+								connector.status_label || 'Mocked · Not connected'
+							)}</span>`
+						: `<span class="moment-chip moment-chip--muted">${esc(unsupportedReason(connector))}</span>`;
 					return `
-				<li class="moment-dest">
+				<li class="moment-dest${supported ? '' : ' moment-dest--unsupported'}">
 					<label class="moment-dest__row" for="moment-dest-${esc(connector.id)}">
 						<span class="moment-dest__info">
 							<span class="moment-dest__name">${esc(connector.label)}</span>
-							<span class="moment-chip ${connector.connected ? 'moment-chip--success' : 'moment-chip--muted'}">${esc(
-								connector.status_label || 'Mocked · Not connected'
-							)}</span>
+							${chip}
 						</span>
 						<span class="moment-toggle">
 							<input type="checkbox" class="moment-toggle__input" id="moment-dest-${esc(
 								connector.id
-							)}" data-connector="${esc(connector.id)}"${checked} aria-label="Publish to ${esc(
-								connector.label
-							)}" />
+							)}" data-connector="${esc(connector.id)}"${checked}${supported ? '' : ' disabled'} aria-label="${
+								supported
+									? `Publish to ${esc(connector.label)}`
+									: `${esc(connector.label)} does not support ${esc(TYPE_LABELS[state.primaryType] || state.primaryType)} Moments`
+							}" />
 							<span class="moment-toggle__track" aria-hidden="true"></span>
 						</span>
 					</label>

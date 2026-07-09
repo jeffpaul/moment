@@ -43,6 +43,7 @@ $moment_user = wp_get_current_user();
  * their live connection status.
  */
 $moment_registry   = Moment_Syndication_Registry::instance();
+$moment_all_types  = array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' );
 $moment_connectors = array();
 
 foreach ( $moment_registry->get_connectors() as $moment_connector ) {
@@ -52,6 +53,7 @@ foreach ( $moment_registry->get_connectors() as $moment_connector ) {
 		'connected'    => $moment_connector->is_connected(),
 		'status'       => $moment_connector->is_connected() ? 'connected' : 'mocked',
 		'status_label' => $moment_connector->get_status_label(),
+		'supports'     => array_values( array_filter( $moment_all_types, array( $moment_connector, 'supports_moment_type' ) ) ),
 	);
 }
 

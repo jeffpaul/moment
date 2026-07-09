@@ -38,13 +38,14 @@ class Moment_Bluesky_Connector implements Moment_Syndication_Connector {
 	}
 
 	/**
-	 * Bluesky is a text-first network: notes and mixed Moments.
+	 * Bluesky is text-first, so every Moment type is supported — any
+	 * Moment can be announced as caption + permalink.
 	 *
 	 * @param string $type Moment primary type.
 	 * @return bool
 	 */
 	public function supports_moment_type( string $type ): bool {
-		return in_array( $type, array( 'note', 'mixed' ), true );
+		return in_array( $type, array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' ), true );
 	}
 
 	/**

@@ -57,6 +57,14 @@ test('note Moment: Bluesky preselected, publishes, appears in notes view', async
 	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
 	await expect(page.locator('[data-connector="instagram"]')).not.toBeChecked();
 
+	// A note can't become an Instagram post or a YouTube/TikTok video —
+	// those toggles are visible but disabled, with a reason chip.
+	await expect(page.locator('[data-connector="instagram"]')).toBeDisabled();
+	await expect(page.locator('[data-connector="youtube"]')).toBeDisabled();
+	await expect(page.locator('[data-connector="tiktok"]')).toBeDisabled();
+	await expect(page.getByText('Needs an image')).toBeVisible();
+	await expect(page.getByText('Needs video').first()).toBeVisible();
+
 	await page.locator('[data-action="publish"]').click();
 	await expect(page.getByText('Published to your site')).toBeVisible();
 	await expect(page.getByText('Bluesky')).toBeVisible(); // mocked syndication row

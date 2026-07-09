@@ -40,10 +40,12 @@ class Moment_Connector_X extends Moment_Connector_Base {
 	/**
 	 * Supported Moment types.
 	 *
+	 * Text-first network: any Moment can be announced as caption + permalink.
+	 *
 	 * @return string[]
 	 */
 	protected function get_supported_types(): array {
-		return array( 'note', 'image', 'mixed' );
+		return array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' );
 	}
 
 	/**

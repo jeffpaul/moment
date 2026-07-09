@@ -210,11 +210,31 @@ class Moment_Syndication_Registry {
 	 */
 	public function publish_to_targets( int $post_id, array $target_ids, array $payload ): array {
 		$results = array();
+		$type    = isset( $payload['primary_type'] ) ? sanitize_key( (string) $payload['primary_type'] ) : '';
 
 		foreach ( $target_ids as $id ) {
 			$connector = $this->get_connector( (string) $id );
 
 			if ( ! $connector ) {
+				continue;
+			}
+
+			// A note can't become an Instagram post or a YouTube video:
+			// skip targets that can't represent this Moment type. The
+			// publish UI disables these toggles, but the REST API accepts
+			// arbitrary targets, so enforce here too.
+			if ( '' !== $type && ! $connector->supports_moment_type( $type ) ) {
+				$results[ $connector->get_id() ] = array(
+					'success' => false,
+					'status'  => 'unsupported',
+					'message' => sprintf(
+						/* translators: 1: connector label, 2: Moment type. */
+						__( '%1$s does not support %2$s Moments.', 'moment' ),
+						$connector->get_label(),
+						$type
+					),
+				);
+
 				continue;
 			}
 
