@@ -1,0 +1,30 @@
+/**
+ * Moment brand palette for the hooks documentation site.
+ *
+ * Appended to the generated wp-hooks-docs/src/css/custom.css by the
+ * Hooks Docs workflow, overriding the generator's default WordPress-blue
+ * Infima variables with the plugin's purples (see README "Colors"):
+ * primary #7A00DF, deep #5300BE, light #D7A7FF, wash rgba(122,0,223,.12).
+ */
+
+:root {
+  --ifm-color-primary: #7a00df;
+  --ifm-color-primary-dark: #6e00c9;
+  --ifm-color-primary-darker: #6100b1;
+  --ifm-color-primary-darkest: #5300be;
+  --ifm-color-primary-light: #8a1fe4;
+  --ifm-color-primary-lighter: #9538e8;
+  --ifm-color-primary-lightest: #d7a7ff;
+  --docusaurus-highlighted-code-line-bg: rgba(122, 0, 223, 0.12);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #d7a7ff;
+  --ifm-color-primary-dark: #c98bff;
+  --ifm-color-primary-darker: #c17aff;
+  --ifm-color-primary-darkest: #a94fff;
+  --ifm-color-primary-light: #e5c3ff;
+  --ifm-color-primary-lighter: #ecd2ff;
+  --ifm-color-primary-lightest: #f5e7ff;
+  --docusaurus-highlighted-code-line-bg: rgba(215, 167, 255, 0.15);
+}

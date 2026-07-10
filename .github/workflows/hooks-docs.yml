@@ -14,6 +14,7 @@ on:
       - '**.php'
       - 'wp-hooks-doc.json'
       - '.github/workflows/hooks-docs.yml'
+      - '.github/hooks-docs/**'
   workflow_dispatch:
 
 permissions: {}
@@ -47,6 +48,11 @@ jobs:
         # @docusaurus/faster — the markdown + site project still generate,
         # so install the bundler and build explicitly below.
         run: npx --yes @10up/wp-hooks-documentor@latest generate || true
+
+      - name: Apply Moment brand palette
+        # Appended after the generator's defaults so the later rules win;
+        # the tool's structural styles reference these palette variables.
+        run: cat .github/hooks-docs/brand.css >> wp-hooks-docs/src/css/custom.css
 
       - name: Build static site
         run: |
