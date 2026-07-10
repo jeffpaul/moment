@@ -1,10 +1,13 @@
 <?php
 /**
  * Plugin Name: Moment
- * Description: Personal Site Publisher Mode for WordPress.
+ * Plugin URI: https://github.com/jeffpaul/moment
+ * Description: Personal Site Publisher Mode for WordPress: capture, caption, and publish Moments from your phone. Your site stays the source of truth.
  * Version: 0.1.0
  * Requires at least: 7.0
  * Requires PHP: 8.1
+ * Author: Jeff Paul
+ * Author URI: https://github.com/jeffpaul
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: moment

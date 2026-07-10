@@ -4,9 +4,10 @@ name: WordPress Version Checker
 # (wordpress.org publishes wordpress-X.Y-RC1.zip). When an RC exists — or,
 # as a fallback, when a final release shipped without the bump being merged —
 # opens a PR that:
-#   - bumps "Tested up to" to the upcoming/new version (README.md)
+#   - bumps "Tested up to" to the upcoming/new version (README.md, readme.txt)
 #   - bumps "Requires at least" to one release earlier (moment.php, README.md,
-#     phpcs.xml.dist) per the latest-and-latest-minus-one support policy
+#     readme.txt, phpcs.xml.dist) per the latest-and-latest-minus-one
+#     support policy
 #
 # The Tests workflow resolves its "candidate" matrix legs to the same RC
 # build, so the PR's checks exercise the actual upcoming release: green
@@ -114,6 +115,14 @@ jobs:
           readme = readme.replace(f'- WordPress {old_minimum}+', f'- WordPress {minimum}+')
           open('README.md', 'w').write(readme)
 
+          # readme.txt — wordpress.org header block.
+          readme_txt = open('readme.txt').read()
+          readme_txt = readme_txt.replace(f'Tested up to: {tested}', f'Tested up to: {target}')
+          readme_txt = readme_txt.replace(
+              f'Requires at least: {old_minimum}', f'Requires at least: {minimum}'
+          )
+          open('readme.txt', 'w').write(readme_txt)
+
           # moment.php — plugin header.
           plugin = open('moment.php').read()
           plugin = plugin.replace(
@@ -153,8 +162,8 @@ jobs:
           body: |
             WordPress ${{ steps.bump.outputs.target }} — ${{ steps.bump.outputs.reason }}. This automated PR:
 
-            - Bumps **Tested up to** to `${{ steps.bump.outputs.target }}` (README.md)
-            - Bumps **Requires at least** from `${{ steps.bump.outputs.old_minimum }}` to `${{ steps.bump.outputs.minimum }}` (moment.php, README.md, phpcs.xml.dist)
+            - Bumps **Tested up to** to `${{ steps.bump.outputs.target }}` (README.md, readme.txt)
+            - Bumps **Requires at least** from `${{ steps.bump.outputs.old_minimum }}` to `${{ steps.bump.outputs.minimum }}` (moment.php, README.md, readme.txt, phpcs.xml.dist)
 
             The Tests workflow's candidate matrix legs resolve to the ${{ steps.bump.outputs.target }} release candidate while it exists, so the checks on this PR exercise the actual upcoming release.
 

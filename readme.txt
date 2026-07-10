@@ -1,0 +1,92 @@
+=== Moment ===
+Contributors: jeffpaul
+Tags: publishing, mobile, pwa, syndication, indieweb
+Requires at least: 7.0
+Tested up to: 7.0
+Requires PHP: 8.1
+Stable tag: 0.1.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Personal Site Publisher Mode for WordPress: capture, caption, and publish Moments from your phone. Your site stays the source of truth.
+
+== Description ==
+
+Moment is a phone-first publishing experience for WordPress. A logged-in user visits `/moment`, picks media from the camera roll, adds a caption, and publishes a standard WordPress post — the site stays the canonical source of truth.
+
+WordPress does not need to become a social network. It needs to become the best place for social-shaped content to begin.
+
+= What you get =
+
+* **A phone app feel** — visit `/moment`, add it to your home screen, and publish images, videos, audio, and notes from a focused, mobile-first app shell with none of the wp-admin chrome.
+* **Standard WordPress posts** — every Moment is a regular post with block markup. Your feeds, themes, comments, and export tools all keep working, and deactivating Moment never strands your content.
+* **Syndication routing** — choose which networks each Moment also publishes to. Moment remembers your routing habits per content type and only offers destinations that are actually connected.
+* **Conversation backflow** — replies from syndicated copies come back to your site as native WordPress comments, automatically (hourly background sync plus an opportunistic refresh when you view notifications). No manual sync step.
+* **Federation friendly** — replies delivered by the ActivityPub, ATmosphere, or Webmention plugins are recognized and labeled in Moment notifications, and Moment renders IndieWeb `u-syndication` markup so Bridgy backfeed works out of the box.
+* **Optional AI Assist** — caption, alt text, and tag suggestions through the WordPress 7.0 AI Client. Any configured AI provider plugin powers all of it; no provider, no AI UI, and publishing never depends on it.
+* **Blocks and shortcodes** — timeline and per-type views are available as both `[moment_*]` shortcodes and `moment/*` blocks, rendering identical output.
+
+= Publishing destinations =
+
+Out of the box, Moment ships demonstration connectors so you can explore the full publish-and-reply flow without any accounts. Real bi-directional publishing for Bluesky and Mastodon is available through separate companion connector plugins (see the FAQ) that store credentials via the WordPress 7.0 Connectors API. Your site itself is always the primary destination — social networks are strictly additive.
+
+= External services =
+
+This plugin does not send data to any external service. The bundled demonstration connectors are mocks; real network publishing is handled by separate companion connector plugins, and AI features go through the WordPress core AI Client and whichever provider plugin you have configured.
+
+= AI-assisted development =
+
+This plugin was generated with Claude Code working from the Project Moment specification documents, with human guidance, review, and testing throughout — every build phase was gated on verification against a live WordPress site, and the test suites (PHPUnit, WP-CLI smoke, browser E2E) exist to keep that review honest. Treat it as an AI-generated, human-directed prototype.
+
+== Installation ==
+
+1. Upload the `moment` folder to `/wp-content/plugins/`, or install through the WordPress plugins screen.
+2. Activate the plugin through the **Plugins** screen.
+3. Visit `https://yoursite.example/moment` on your phone while logged in.
+4. Optional: add it to your home screen (Safari: Share → Add to Home Screen; Chrome: menu → Add to Home Screen / Install App). Standalone app display requires HTTPS.
+
+Activation creates section pages (`/timeline`, `/images`, `/videos`, `/audio`, `/notes`) that render your Moments inside your theme.
+
+== Frequently Asked Questions ==
+
+= How do I publish to Bluesky or Mastodon for real? =
+
+Install the companion connector plugins — **Moment Connector for Bluesky** and **Moment Connector for Mastodon**, available from the plugin's GitHub repository at https://github.com/jeffpaul/moment. Each stores its credential (a Bluesky app password or Mastodon access token) through the WordPress 7.0 Connectors API under Settings → Connectors. Once configured, Moments publish for real and replies flow back into WordPress as comments on the original post. If a connector is unconfigured or a call fails, publishing never blocks — it degrades to mocked demo behavior.
+
+= Why don't I see any social networks on the publish screen? =
+
+Moment only offers destinations that can actually publish (and pull replies back): a network appears once its connector plugin is active and configured. With nothing connected, "Your Site" is the only destination — publishing to your own site always works.
+
+= How do replies come back to my site? =
+
+Automatically. An hourly background sync (plus a refresh whenever you view notifications) fetches replies from your syndicated copies and imports them as WordPress comments, deduplicated per reply and labeled with their source ("Reply from Bluesky"). If you run the ActivityPub, ATmosphere, or Webmention plugins, replies they deliver are recognized and labeled too — those arrive by push, live, with no polling at all.
+
+= Which AI providers work with AI Assist? =
+
+Any WordPress AI Client provider plugin — Anthropic (Claude), Google (Gemini), or OpenAI (GPT). Moment never talks to an AI vendor directly and never stores API keys; it goes through the core AI Client, and the first configured provider powers caption, alt text, and tag suggestions. Without a configured provider, the AI Assist UI simply does not appear.
+
+= Does Moment create a custom post type? =
+
+No. Every Moment is a standard post with post meta, so your content is fully portable and remains intact and readable if you deactivate the plugin.
+
+= Does it work offline? =
+
+Partially. A conservative service worker caches only the app's static CSS and JS for fast loading. It never caches REST responses, nonces, HTML, or media, and there is no offline publishing mode.
+
+== Changelog ==
+
+= 0.1.0 =
+* Initial prototype release.
+* Phone-first `/moment` app shell with Home, Create, Publish, and Notifications screens; PWA manifest and home-screen support.
+* Publishing pipeline creating standard WordPress posts with block markup for image, video, audio, podcast, note, gallery, and mixed Moments.
+* REST API under `/wp-json/moment/v1/` (moments, AI suggestions, response sync, notifications).
+* Syndication connector registry with per-type routing defaults, per-user destination memory, and connected-only destination visibility.
+* Automatic conversation backflow: hourly sync plus on-view freshen, importing replies as native WordPress comments.
+* Federation integration: labeled backflow from the ActivityPub, ATmosphere, and Webmention plugins; IndieWeb u-syndication markup for Bridgy backfeed.
+* Optional AI Assist (captions, alt text, tags) via the WordPress 7.0 AI Client.
+* Timeline and per-type views as both shortcodes and dynamic blocks.
+
+== Upgrade Notice ==
+
+= 0.1.0 =
+Initial release.
