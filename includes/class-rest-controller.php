@@ -340,7 +340,13 @@ class Moment_REST_Controller extends WP_REST_Controller {
 
 		return array(
 			'id'                 => absint( $post_id ),
-			'title'              => sanitize_text_field( get_the_title( $post_id ) ),
+			// Plain text: the_title filters entity-encode (&#8217; etc.) for
+			// HTML output, but API consumers escape at render time themselves.
+			'title'              => html_entity_decode(
+				sanitize_text_field( get_the_title( $post_id ) ),
+				ENT_QUOTES,
+				'UTF-8'
+			),
 			'permalink'          => esc_url_raw( (string) get_permalink( $post_id ) ),
 			'status'             => sanitize_key( (string) get_post_status( $post_id ) ),
 			'type'               => sanitize_key( (string) get_post_meta( $post_id, '_moment_primary_type', true ) ),

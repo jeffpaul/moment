@@ -73,6 +73,14 @@ No. Every Moment is a standard post with post meta, so your content is fully por
 
 Partially. A conservative service worker caches only the app's static CSS and JS for fast loading. It never caches REST responses, nonces, HTML, or media, and there is no offline publishing mode.
 
+== Screenshots ==
+
+1. Home — the phone-first app shell: recent Moments and one-tap publishing.
+2. Create — pick media from the camera roll, add a caption, optional AI Assist.
+3. Publish — choose destinations: your site always, connected networks strictly additive.
+4. Notifications — replies from syndicated copies flow back automatically, labeled by source.
+5. Timeline — Moments rendered inside your theme, via shortcode or block.
+
 == Changelog ==
 
 = 0.1.0 =

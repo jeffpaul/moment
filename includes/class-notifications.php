@@ -252,7 +252,13 @@ class Moment_Notifications {
 				? sanitize_text_field( $external_author )
 				: null,
 			'post_id'               => (int) $post->ID,
-			'post_title'            => sanitize_text_field( get_the_title( $post ) ),
+			// Plain text: the_title filters entity-encode for HTML output,
+			// but API consumers escape at render time themselves.
+			'post_title'            => html_entity_decode(
+				sanitize_text_field( get_the_title( $post ) ),
+				ENT_QUOTES,
+				'UTF-8'
+			),
 			'post_url'              => esc_url_raw( (string) get_permalink( $post ) ),
 			'moment_type'           => sanitize_key( (string) get_post_meta( $post->ID, '_moment_primary_type', true ) ),
 		);
