@@ -8,6 +8,7 @@ moment-connector-bluesky
 moment-connector-mastodon
 node_modules
 docs
+wp-hooks-docs
 tests
 vendor
 
@@ -25,3 +26,4 @@ phpcs.xml.dist
 phpunit.xml
 phpunit.xml.dist
 playwright.config.js
+wp-hooks-doc.json

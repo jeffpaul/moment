@@ -1,0 +1,23 @@
+{
+	"input": ".",
+	"outputDir": "./wp-hooks-docs",
+	"ignoreFiles": [
+		"/tests/",
+		"/vendor/",
+		"/node_modules/",
+		"/docs/",
+		"/bin/",
+		"/.wordpress-org/",
+		"/wp-hooks-docs/"
+	],
+	"ignoreHooks": [],
+	"title": "Moment Hooks",
+	"tagline": "Action and filter reference for the Moment plugin and its connectors",
+	"url": "https://jeffpaul.github.io",
+	"baseUrl": "/moment/",
+	"repoUrl": "https://github.com/jeffpaul/moment",
+	"organizationName": "jeffpaul",
+	"projectName": "moment",
+	"footerStyle": "dark",
+	"clean": true
+}

@@ -13,3 +13,6 @@ playwright-report/
 
 # Machine-local Claude Code settings
 .claude/settings.local.json
+
+# Generated hooks documentation site
+wp-hooks-docs/

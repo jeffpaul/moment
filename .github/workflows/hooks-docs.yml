@@ -1,0 +1,91 @@
+name: Hooks Docs
+
+# Builds the hooks reference site (wp-hooks-documentor → Docusaurus) and
+# deploys it to GitHub Pages: https://jeffpaul.github.io/moment/
+#
+# Pages requires a public repo (or a paid plan) — until then the deploy
+# job skips gracefully and the build job still validates that the docs
+# generate correctly.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - 'wp-hooks-doc.json'
+      - '.github/workflows/hooks-docs.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    name: Generate hooks documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      pages-enabled: ${{ steps.pages-check.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate hook docs
+        # The tool's internal Docusaurus build fails because its generated
+        # config enables future.v4 (rspack bundler) without shipping
+        # @docusaurus/faster — the markdown + site project still generate,
+        # so install the bundler and build explicitly below.
+        run: npx --yes @10up/wp-hooks-documentor@latest generate || true
+
+      - name: Build static site
+        run: |
+          test -d wp-hooks-docs/docs/hooks || { echo "::error::hook docs were not generated"; exit 1; }
+          cd wp-hooks-docs
+          npm install --no-fund --no-audit @docusaurus/faster
+          npm run build
+          test -f build/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: wp-hooks-docs/build
+
+      - name: Check whether GitHub Pages is enabled
+        id: pages-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages is not enabled for this repository (private repos need a paid plan). Docs built successfully; deploy skipped."
+          fi
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: needs.build.outputs.pages-enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
