@@ -101,6 +101,44 @@ class Test_Publisher extends WP_UnitTestCase {
 		$this->assertContains( 'bluesky', $explicit_targets );
 	}
 
+	/**
+	 * Destination memory: an explicit selection for a Moment type becomes
+	 * that type's preselection next time (per user), including an explicit
+	 * empty selection; types never published keep the model defaults.
+	 */
+	public function test_destination_selection_remembered_per_type() {
+		$publisher = new Moment_Publisher();
+
+		// Explicit choice for notes is remembered.
+		$publisher->publish(
+			array(
+				'caption'             => 'Remember me',
+				'primary_type'        => 'note',
+				'syndication_targets' => array( 'mastodon', 'x' ),
+			)
+		);
+
+		$this->assertSame( array( 'mastodon', 'x' ), $publisher->get_effective_defaults( 'note' ) );
+
+		// Explicit "none" is a real preference, remembered too.
+		$publisher->publish(
+			array(
+				'caption'             => 'None for notes now',
+				'primary_type'        => 'note',
+				'syndication_targets' => array(),
+			)
+		);
+
+		$this->assertSame( array(), $publisher->get_effective_defaults( 'note' ) );
+
+		// A type never explicitly published keeps the model default.
+		$this->assertSame( array( 'instagram' ), $publisher->get_effective_defaults( 'image' ) );
+
+		// Prefs are per user: a different user still gets model defaults.
+		$other = self::factory()->user->create( array( 'role' => 'author' ) );
+		$this->assertSame( array( 'bluesky' ), $publisher->get_effective_defaults( 'note', $other ) );
+	}
+
 	/** Scenario 5: explicit empty selection overrides defaults. */
 	public function test_explicit_empty_targets_respected() {
 		$publisher = new Moment_Publisher();

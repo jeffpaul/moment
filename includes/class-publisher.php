@@ -123,8 +123,9 @@ class Moment_Publisher {
 			// actually publish (connected connectors). The raw model
 			// defaults are still recorded in _moment_default_destinations;
 			// explicit selections (e.g. tests, API callers) are honored
-			// as-is, mocked or not.
-			$targets = $this->filter_connected( $defaults );
+			// as-is, mocked or not. The user's remembered selection for
+			// this Moment type wins over the model defaults.
+			$targets = $this->filter_connected( $this->get_effective_defaults( $type ) );
 		}
 
 		$title = isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '';
@@ -156,6 +157,10 @@ class Moment_Publisher {
 		}
 
 		$this->attach_media( $post_id, $media_ids, $type );
+
+		if ( $selection_provided ) {
+			$this->remember_destination_prefs( $type, $targets );
+		}
 
 		// Apply AI-Assist-accepted tags and alt text when provided.
 		$tags = array_filter( array_map( 'sanitize_text_field', (array) ( $data['tags'] ?? array() ) ) );
@@ -647,6 +652,63 @@ class Moment_Publisher {
 		$registry = Moment_Plugin::instance()->syndication_registry;
 
 		return $this->sanitize_connector_ids( $registry->get_default_destinations( $type ) );
+	}
+
+	/**
+	 * User meta key remembering per-type destination selections.
+	 *
+	 * @var string
+	 */
+	private const DESTINATION_PREFS_META = 'moment_destination_prefs';
+
+	/**
+	 * The preselected destinations for a Moment type.
+	 *
+	 * The user's last explicit selection for the type wins; the registry's
+	 * model defaults are the fallback for types never published before.
+	 *
+	 * @param string $type    Moment primary type.
+	 * @param int    $user_id User ID; defaults to the current user.
+	 * @return string[]
+	 */
+	public function get_effective_defaults( string $type, int $user_id = 0 ): array {
+		$user_id = $user_id ? $user_id : get_current_user_id();
+		$prefs   = $user_id ? get_user_meta( $user_id, self::DESTINATION_PREFS_META, true ) : array();
+
+		if ( is_array( $prefs ) && isset( $prefs[ $type ] ) && is_array( $prefs[ $type ] ) ) {
+			return $this->sanitize_connector_ids( $prefs[ $type ] );
+		}
+
+		return $this->get_registry_defaults( $type );
+	}
+
+	/**
+	 * Remember an explicit destination selection for a Moment type.
+	 *
+	 * Called on successful publish so the next Moment of the same type
+	 * preselects the same networks. An explicit empty selection is
+	 * remembered too — "none for notes" is a real preference.
+	 *
+	 * @param string   $type    Moment primary type.
+	 * @param string[] $targets Selected connector IDs.
+	 * @return void
+	 */
+	private function remember_destination_prefs( string $type, array $targets ): void {
+		$user_id = get_current_user_id();
+
+		if ( ! $user_id ) {
+			return;
+		}
+
+		$prefs = get_user_meta( $user_id, self::DESTINATION_PREFS_META, true );
+
+		if ( ! is_array( $prefs ) ) {
+			$prefs = array();
+		}
+
+		$prefs[ $type ] = $this->sanitize_connector_ids( $targets );
+
+		update_user_meta( $user_id, self::DESTINATION_PREFS_META, $prefs );
 	}
 
 	/**

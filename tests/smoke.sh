@@ -44,6 +44,7 @@ cleanup() {
       if (!empty($state[$key])) { wp_delete_post((int) $state[$key], true); }
     }
     if (!empty($state["att_id"])) { wp_delete_attachment((int) $state["att_id"], true); }
+    delete_user_meta(1, "moment_destination_prefs");
     echo "INFO: cleanup complete (" . count(array_filter($state)) . " tracked items)\n";
   ' 2>&1 || echo "WARN: cleanup eval failed — check for leftover 'Smoke' posts"
   rm -f "$MOMENT_SMOKE_STATE"
@@ -155,6 +156,8 @@ $plain_defaults = json_decode((string) get_post_meta($plain_id, "_moment_default
 echo array() === $plain_targets ? "PASS: no-selection publish targets nothing (bluesky not connected)\n" : "FAIL: no-selection targets are " . wp_json_encode($plain_targets) . ", expected []\n";
 echo is_array($plain_defaults) && in_array("bluesky", $plain_defaults, true) ? "PASS: model default (bluesky) still recorded in _moment_default_destinations\n" : "FAIL: _moment_default_destinations is " . wp_json_encode($plain_defaults) . "\n";
 echo "not_attempted" === get_post_meta($plain_id, "_moment_syndication_status", true) ? "PASS: no-selection publish syndication status not_attempted\n" : "FAIL: status is " . get_post_meta($plain_id, "_moment_syndication_status", true) . "\n";
+$prefs = get_user_meta(1, "moment_destination_prefs", true);
+echo is_array($prefs) && isset($prefs["note"]) && in_array("bluesky", $prefs["note"], true) ? "PASS: explicit note selection remembered in destination prefs\n" : "FAIL: destination prefs are " . wp_json_encode($prefs) . "\n";
 file_put_contents($sf, wp_json_encode($state));
 PHP
 run_eval "note Moment" "$PHP"

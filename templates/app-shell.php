@@ -46,20 +46,12 @@ $moment_registry   = Moment_Syndication_Registry::instance();
 $moment_all_types  = array( 'note', 'image', 'gallery', 'video', 'audio', 'podcast', 'mixed' );
 $moment_connectors = array();
 
-/**
- * Filters whether unconnected connectors appear as publish destinations.
- *
- * By default only genuinely connected networks (a real connector plugin
- * with credentials configured) are offered — a destination that cannot
- * actually publish or return replies is not shown. Demos and tests can
- * return true to surface the mocked connectors.
- *
- * @param bool $show_unconnected Default false.
- */
-$moment_show_unconnected = (bool) apply_filters( 'moment_show_unconnected_connectors', false );
-
+// Only genuinely connected networks (a real connector plugin with
+// credentials configured) are offered — a destination that cannot
+// actually publish or return replies is not shown. The site itself is
+// always the canonical destination either way.
 foreach ( $moment_registry->get_connectors() as $moment_connector ) {
-	if ( ! $moment_connector->is_connected() && ! $moment_show_unconnected ) {
+	if ( ! $moment_connector->is_connected() ) {
 		continue;
 	}
 
@@ -74,12 +66,14 @@ foreach ( $moment_registry->get_connectors() as $moment_connector ) {
 }
 
 $moment_visible_ids   = array_column( $moment_connectors, 'id' );
+$moment_publisher     = Moment_Plugin::instance()->publisher;
 $moment_type_defaults = array();
 
 foreach ( $moment_all_types as $moment_type ) {
-	// Defaults only preselect destinations that are actually offered.
+	// The user's remembered selection for the type (falling back to the
+	// model defaults), limited to destinations that are actually offered.
 	$moment_type_defaults[ $moment_type ] = array_values(
-		array_intersect( $moment_registry->get_defaults_for_type( $moment_type ), $moment_visible_ids )
+		array_intersect( $moment_publisher->get_effective_defaults( $moment_type ), $moment_visible_ids )
 	);
 }
 

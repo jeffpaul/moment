@@ -201,16 +201,22 @@ jobs:
           # /moment and the section pages need pretty permalinks in a browser.
           wp rewrite structure '/%postname%/' --path=/tmp/wp
 
-      - name: Link and activate the plugin
+      - name: Link and activate the plugins
         run: |
           ln -s "$GITHUB_WORKSPACE" /tmp/wp/wp-content/plugins/moment
-          wp plugin activate moment --path=/tmp/wp
+          ln -s "$GITHUB_WORKSPACE/moment-connector-bluesky" /tmp/wp/wp-content/plugins/moment-connector-bluesky
+          wp plugin activate moment moment-connector-bluesky --path=/tmp/wp
           wp rewrite flush --path=/tmp/wp
-          # Demo mode: the publish screen hides unconnected networks by
-          # default; the E2E suite asserts against the mocked connectors.
+
+      - name: Connect Bluesky (stubbed API)
+        run: |
+          # The publish screen only offers connected networks; the E2E
+          # suite exercises the real connected path against a stubbed
+          # AT Protocol API (no network, no real account).
           mkdir -p /tmp/wp/wp-content/mu-plugins
-          printf '<?php add_filter( "moment_show_unconnected_connectors", "__return_true" );\n' \
-            > /tmp/wp/wp-content/mu-plugins/moment-demo-mode.php
+          cp "$GITHUB_WORKSPACE/tests/e2e/fixtures/moment-e2e-bluesky-stub.php" /tmp/wp/wp-content/mu-plugins/
+          wp option update moment_bluesky_handle e2e.bsky.social --path=/tmp/wp
+          wp option update connectors_social_bluesky_app_password e2e-fake --path=/tmp/wp
 
       - name: Start web server
         run: |

@@ -114,15 +114,15 @@ back to mocked demo behavior.
 Moment only offers destinations that can actually publish (and pull
 replies back): a network appears once its connector plugin is active
 *and* configured. With nothing connected, "Your Site" is the only
-destination — which is the honest state of the world. Demos and tests
-can surface the built-in mocked connectors with:
+destination — publishing to your own site always works; social networks
+are strictly additive. The same rule applies to AI: the **AI Assist**
+button only appears when a WordPress AI provider is actually configured.
 
-```php
-add_filter( 'moment_show_unconnected_connectors', '__return_true' );
-```
-
-The same rule applies to AI: the **AI Assist** button only appears when
-a WordPress AI provider is actually configured.
+Moment also remembers your routing habits per Moment type: once you
+publish, say, an image Moment to a specific set of networks, the next
+image Moment preselects the same set (per user). Types you have never
+published fall back to the built-in defaults (note → Bluesky, image →
+Instagram, video → YouTube).
 
 ### What social network connectors could work?
 

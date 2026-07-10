@@ -5,14 +5,21 @@
  *   npx playwright install chromium   # once
  *   WP_BASE_URL=http://wp70.local WP_ADMIN_USER=... WP_ADMIN_PASS=... npx playwright test
  *
- * Needs a live WordPress with the moment plugin active, pretty permalinks,
- * and an administrator account. Tests create posts titled "E2E ..." and do
- * not delete them — use a scratch site or clean up afterwards.
+ * Needs a live WordPress with pretty permalinks, an administrator account,
+ * and the moment + moment-connector-bluesky plugins active. Tests create
+ * posts titled "E2E ..." and do not delete them — use a scratch site or
+ * clean up afterwards.
  *
- * DEMO MODE REQUIRED: the publish screen hides unconnected networks by
- * default, and these tests assert against the mocked connectors. Enable
- * demo mode on the target site first (the CI workflow does this):
- *   add_filter( 'moment_show_unconnected_connectors', '__return_true' );
+ * CONNECTED BLUESKY REQUIRED: the publish screen only offers connected
+ * networks, so the target site needs Bluesky "connected" with the stubbed
+ * API (the CI workflow does all of this):
+ *   1. copy tests/e2e/fixtures/moment-e2e-bluesky-stub.php into wp-content/mu-plugins/
+ *   2. wp option update moment_bluesky_handle e2e.bsky.social
+ *   3. wp option update connectors_social_bluesky_app_password e2e-fake
+ *
+ * FRESH USER REQUIRED per run: destination memory persists per user, so
+ * the image test's "nothing preselected" baseline needs an account with
+ * no publish history (recreate the test user between local runs).
  */
 import { test, expect } from '@playwright/test';
 
@@ -47,8 +54,9 @@ test('authenticated user sees Moment Home without wp-admin chrome', async ({ pag
 	await expect(page.locator('#adminmenu')).toHaveCount(0);
 });
 
-// Scenarios 3 + 4: text Moment with Bluesky preselected, published from the UI.
-test('note Moment: Bluesky preselected, publishes, appears in notes view', async ({ page }) => {
+// Scenarios 3 + 4: note Moment with the connected network (Bluesky)
+// preselected by the model default; unconnected networks are not offered.
+test('note Moment: connected Bluesky preselected, publishes, appears in notes view', async ({ page }) => {
 	const caption = `E2E note ${RUN_ID}`;
 
 	await loginAs(page);
@@ -58,29 +66,27 @@ test('note Moment: Bluesky preselected, publishes, appears in notes view', async
 	await page.fill('#moment-caption', caption);
 	await page.locator('[data-action="next"]').click();
 
-	// Type-based default: note → Bluesky on; Your Site locked on.
+	// Bluesky is connected (stubbed) → offered with a Connected chip and
+	// preselected for notes. Unconnected networks are not offered at all.
 	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
-	await expect(page.locator('[data-connector="instagram"]')).not.toBeChecked();
-
-	// A note can't become an Instagram post or a YouTube/TikTok video —
-	// those toggles are visible but disabled, with a reason chip.
-	await expect(page.locator('[data-connector="instagram"]')).toBeDisabled();
-	await expect(page.locator('[data-connector="youtube"]')).toBeDisabled();
-	await expect(page.locator('[data-connector="tiktok"]')).toBeDisabled();
-	await expect(page.getByText('Needs an image')).toBeVisible();
-	await expect(page.getByText('Needs video').first()).toBeVisible();
+	await expect(page.getByText('Connected').first()).toBeVisible();
+	await expect(page.locator('[data-connector="instagram"]')).toHaveCount(0);
+	await expect(page.locator('[data-connector="youtube"]')).toHaveCount(0);
+	await expect(page.locator('[data-connector="mastodon"]')).toHaveCount(0);
 
 	await page.locator('[data-action="publish"]').click();
 	await expect(page.getByText('Published to your site')).toBeVisible();
-	await expect(page.getByText('Bluesky')).toBeVisible(); // mocked syndication row
+	await expect(page.getByText('Bluesky')).toBeVisible(); // syndication row
 
 	await page.goto('/notes/');
 	await expect(page.getByText(caption)).toBeVisible();
 });
 
-// Scenario 2: image Moment — file picker accepts an image; Instagram default;
-// the post lands in wp-admin as a standard post and in timeline + images views.
-test('image Moment: picker accepts image, publishes, visible in wp-admin and views', async ({ page }) => {
+// Scenario 2 + destination memory: image Moment via the file picker; no
+// networks preselected initially (image default Instagram is not
+// connected), the user's explicit choice is remembered for the next
+// image Moment.
+test('image Moment: picker works, choice of networks is remembered per type', async ({ page }) => {
 	const caption = `E2E image ${RUN_ID}`;
 
 	await loginAs(page);
@@ -92,7 +98,14 @@ test('image Moment: picker accepts image, publishes, visible in wp-admin and vie
 	await page.fill('#moment-caption', caption);
 	await page.locator('[data-action="next"]').click();
 
-	await expect(page.locator('[data-connector="instagram"]')).toBeChecked();
+	// Image default is Instagram — not connected, so nothing preselected;
+	// Bluesky is offered (text networks take any type) but off.
+	await expect(page.locator('[data-connector="bluesky"]')).not.toBeChecked();
+
+	// Explicitly choose Bluesky for this image Moment.
+	await page.locator('[data-connector="bluesky"]').click({ force: true });
+	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
+
 	await page.locator('[data-action="publish"]').click();
 	await expect(page.getByText('Published to your site')).toBeVisible();
 
@@ -105,24 +118,33 @@ test('image Moment: picker accepts image, publishes, visible in wp-admin and vie
 	await expect(page.getByText(caption)).toBeVisible();
 	await page.goto('/images/');
 	await expect(page.getByText(caption)).toBeVisible();
+
+	// Destination memory: the next image Moment preselects Bluesky.
+	await page.goto('/moment');
+	await page.locator('[data-action="new-moment"]').click();
+	await page.setInputFiles('#moment-file-input', 'tests/e2e/fixtures/test-image.png');
+	await page.fill('#moment-caption', `E2E image memory ${RUN_ID}`);
+	await page.locator('[data-action="next"]').click();
+	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
 });
 
-// Scenario 7: mocked backflow replies appear in the notifications screen.
+// Scenario 7: real (stubbed) backflow replies appear in notifications.
 test('notifications show imported social replies with source labels', async ({ page }) => {
 	const caption = `E2E backflow ${RUN_ID}`;
 
 	await loginAs(page);
 
-	// Publish a note Moment (Bluesky default) through the UI.
+	// Publish a note Moment to connected (stubbed) Bluesky through the UI.
 	await page.goto('/moment');
 	await page.locator('[data-action="new-moment"]').click();
 	await page.fill('#moment-caption', caption);
 	await page.locator('[data-action="next"]').click();
+	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
 	await page.locator('[data-action="publish"]').click();
 	await expect(page.getByText('Published to your site')).toBeVisible();
 
-	// Trigger the mocked sync from the app context (uses the page's own
-	// nonce + REST config, same as a future in-UI sync control would).
+	// Trigger the sync from the app context (uses the page's own nonce +
+	// REST config, same as a future in-UI sync control would).
 	const imported = await page.evaluate(async () => {
 		const config = window.momentApp;
 		const listRes = await fetch(`${config.restUrl}moments?per_page=1`, {
@@ -143,4 +165,5 @@ test('notifications show imported social replies with source labels', async ({ p
 
 	await page.goto('/moment/notifications');
 	await expect(page.getByText('Reply from Bluesky').first()).toBeVisible();
+	await expect(page.getByText('Love this one!').first()).toBeVisible();
 });
