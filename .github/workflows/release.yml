@@ -1,8 +1,9 @@
 name: Release
 
-# Tag-driven release: pushing a v* tag (e.g. v0.1.0) builds the
+# Tag-driven release: pushing a version tag (v0.1.0 or 0.1.0) builds the
 # .distignore-filtered distribution zip via wp dist-archive and attaches it
-# to a GitHub release. The zip is the artifact to install for testing and
+# to a GitHub release — creating the release, or uploading to it if one
+# was already drafted by hand for the tag. The zip is the artifact to install for testing and
 # the exact tree that would be committed to the wordpress.org SVN trunk.
 #
 # Guard: the tag must match the plugin's declared version everywhere —
@@ -12,7 +13,8 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]*'
+      - '[0-9]*'
 
 permissions: {}
 
@@ -67,7 +69,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" moment.zip \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Moment ${GITHUB_REF_NAME#v}" \
-            --generate-notes
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" moment.zip --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" moment.zip \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Moment ${GITHUB_REF_NAME#v}" \
+              --generate-notes
+          fi
