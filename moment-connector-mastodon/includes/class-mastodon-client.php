@@ -26,6 +26,13 @@ class Moment_Mastodon_Client {
 	private const MAX_STATUS_LENGTH = 500;
 
 	/**
+	 * Maximum media upload size in bytes (Mastodon default image limit: 8MB).
+	 *
+	 * @var int
+	 */
+	private const MAX_MEDIA_BYTES = 8388608;
+
+	/**
 	 * Instance base URL, e.g. https://mastodon.social.
 	 *
 	 * @var string
@@ -51,12 +58,83 @@ class Moment_Mastodon_Client {
 	}
 
 	/**
-	 * Publish a text status.
+	 * Upload a media file for later attachment to a status.
 	 *
-	 * @param string $text Status text (truncated to the Mastodon limit).
+	 * POST /api/v2/media with a manually built multipart body (wp_remote_post
+	 * has no native multipart support). Mastodon returns 200 when processing
+	 * is complete or 202 when accepted but still processing; for images the
+	 * processing is effectively synchronous, so either code with an ID is
+	 * treated as success (no polling in the prototype).
+	 *
+	 * @param string $file_path   Absolute path to a local media file.
+	 * @param string $description Alt text for the media (optional).
+	 * @return array{id: string}|WP_Error
+	 */
+	public function upload_media( string $file_path, string $description = '' ) {
+		if ( '' === $file_path || ! is_file( $file_path ) || ! is_readable( $file_path ) ) {
+			return new WP_Error( 'moment_mastodon_media_file', __( 'Media file is missing or unreadable.', 'moment-connector-mastodon' ) );
+		}
+
+		$size = (int) filesize( $file_path );
+
+		if ( $size <= 0 || $size > self::MAX_MEDIA_BYTES ) {
+			return new WP_Error(
+				'moment_mastodon_media_size',
+				sprintf(
+					/* translators: %s: maximum upload size, e.g. "8 MB". */
+					__( 'Media file exceeds the Mastodon upload limit (%s).', 'moment-connector-mastodon' ),
+					size_format( self::MAX_MEDIA_BYTES )
+				)
+			);
+		}
+
+		$boundary = 'moment-mastodon-' . wp_generate_password( 24, false );
+
+		$response = wp_remote_post(
+			$this->instance . '/api/v2/media',
+			array(
+				// Uploads are larger than status posts; allow more time.
+				'timeout' => 30,
+				'headers' => array(
+					'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
+					'Authorization' => 'Bearer ' . $this->access_token,
+				),
+				'body'    => $this->build_multipart_body( $boundary, $file_path, $description ),
+			)
+		);
+
+		$data = $this->parse_response( $response, 'media' );
+
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		// 200 (processed) and 202 (accepted) both pass parse_response; only
+		// the returned media ID matters for attaching to a status.
+		if ( empty( $data['id'] ) ) {
+			return new WP_Error( 'moment_mastodon_media', __( 'Mastodon did not return a media ID.', 'moment-connector-mastodon' ) );
+		}
+
+		return array( 'id' => (string) $data['id'] );
+	}
+
+	/**
+	 * Publish a status, optionally with previously uploaded media attached.
+	 *
+	 * @param string   $text      Status text (truncated to the Mastodon limit).
+	 * @param string[] $media_ids Mastodon media IDs from upload_media() (max 4).
 	 * @return array{id: string, url: string}|WP_Error
 	 */
-	public function create_status( string $text ) {
+	public function create_status( string $text, array $media_ids = array() ) {
+		$body = array(
+			'status'     => $this->truncate( $text ),
+			'visibility' => 'public',
+		);
+
+		if ( array() !== $media_ids ) {
+			$body['media_ids'] = array_values( array_map( 'strval', $media_ids ) );
+		}
+
 		$response = wp_remote_post(
 			$this->instance . '/api/v1/statuses',
 			array(
@@ -65,12 +143,7 @@ class Moment_Mastodon_Client {
 					'Content-Type'  => 'application/json',
 					'Authorization' => 'Bearer ' . $this->access_token,
 				),
-				'body'    => wp_json_encode(
-					array(
-						'status'     => $this->truncate( $text ),
-						'visibility' => 'public',
-					)
-				),
+				'body'    => wp_json_encode( $body ),
 			)
 		);
 
@@ -181,6 +254,44 @@ class Moment_Mastodon_Client {
 		}
 
 		return is_array( $data ) ? $data : array();
+	}
+
+	/**
+	 * Build a multipart/form-data body for a media upload.
+	 *
+	 * WordPress's HTTP API does not build multipart bodies natively, so the
+	 * `file` part (raw bytes) and optional `description` part (alt text) are
+	 * assembled by hand against the given boundary.
+	 *
+	 * @param string $boundary    Multipart boundary string.
+	 * @param string $file_path   Absolute path to a readable local file.
+	 * @param string $description Alt text for the media.
+	 * @return string
+	 */
+	private function build_multipart_body( string $boundary, string $file_path, string $description ): string {
+		$filename = wp_basename( $file_path );
+		$mime     = (string) ( wp_check_filetype( $filename )['type'] ?? '' );
+
+		if ( '' === $mime ) {
+			$mime = 'application/octet-stream';
+		}
+
+		$body = '';
+
+		if ( '' !== $description ) {
+			$body .= '--' . $boundary . "\r\n";
+			$body .= 'Content-Disposition: form-data; name="description"' . "\r\n\r\n";
+			$body .= $description . "\r\n";
+		}
+
+		$body .= '--' . $boundary . "\r\n";
+		$body .= 'Content-Disposition: form-data; name="file"; filename="' . $filename . '"' . "\r\n";
+		$body .= 'Content-Type: ' . $mime . "\r\n\r\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a local Media Library file (path from get_attached_file()) for an API upload body; not a remote or user-supplied path.
+		$body .= (string) file_get_contents( $file_path );
+		$body .= "\r\n--" . $boundary . '--' . "\r\n";
+
+		return $body;
 	}
 
 	/**

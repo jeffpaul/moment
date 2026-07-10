@@ -39,8 +39,8 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 
 	/**
 	 * Mastodon is text-first, so every Moment type is supported — any
-	 * Moment can be announced as caption + permalink (native media
-	 * attachments are a possible future upgrade via /api/v2/media).
+	 * Moment can be announced as caption + permalink. Image Moments
+	 * additionally attach the images natively via /api/v2/media.
 	 *
 	 * @param string $type Moment primary type.
 	 * @return bool
@@ -70,12 +70,23 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 	}
 
 	/**
+	 * Maximum media attachments per Mastodon status.
+	 *
+	 * @var int
+	 */
+	private const MAX_MEDIA_PER_STATUS = 4;
+
+	/**
 	 * Publish a Moment to Mastodon.
 	 *
-	 * Real path: caption + permalink posted as a public status; the status
-	 * ID is stored as the external ID so backflow can query the thread
-	 * context later. Unconfigured or on API failure: a mocked result, so
-	 * publishing never blocks (mirrors Moment's AI Assist philosophy).
+	 * Real path: caption + permalink posted as a public status, with up to
+	 * four image attachments uploaded natively first (alt text carried over
+	 * as the media description); the status ID is stored as the external ID
+	 * so backflow can query the thread context later. Media upload failures
+	 * never block — the status falls through to text + link only, with the
+	 * failure noted in the result message. Unconfigured or on API failure:
+	 * a mocked result, so publishing never blocks (mirrors Moment's AI
+	 * Assist philosophy).
 	 *
 	 * @param int                  $post_id Moment post ID.
 	 * @param array<string, mixed> $payload Moment context data.
@@ -95,7 +106,9 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 		$permalink = get_permalink( $post_id );
 		$text      = trim( $caption . "\n\n" . ( $permalink ? $permalink : '' ) );
 
-		$result = Moment_Mastodon_Integration::client()->create_status( $text );
+		$media = $this->upload_image_media( $payload );
+
+		$result = Moment_Mastodon_Integration::client()->create_status( $text, $media['ids'] );
 
 		if ( is_wp_error( $result ) ) {
 			// Never block publishing: record a failed-over mock result and
@@ -106,13 +119,87 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 			return $mock;
 		}
 
+		$message = __( 'Published to Mastodon.', 'moment-connector-mastodon' );
+
+		if ( array() !== $media['errors'] ) {
+			$message .= ' ' . sprintf(
+				/* translators: %s: media upload error details. */
+				__( 'Some media uploads were skipped: %s', 'moment-connector-mastodon' ),
+				implode( '; ', $media['errors'] )
+			);
+		}
+
 		return array(
 			'success'            => true,
 			'external_id'        => $result['id'],
 			'external_url'       => $result['url'],
 			'status'             => 'published',
 			'backflow_supported' => true,
-			'message'            => __( 'Published to Mastodon.', 'moment-connector-mastodon' ),
+			'media_attached'     => count( $media['ids'] ),
+			'message'            => $message,
+		);
+	}
+
+	/**
+	 * Upload the Moment's image attachments to Mastodon.
+	 *
+	 * Only images are uploaded in the prototype — video/audio go through
+	 * Mastodon's async processing pipeline (202 + polling), which is out of
+	 * scope; text + permalink still covers them. Alt text becomes the media
+	 * description. Individual failures are collected, never thrown, and
+	 * never block the status post.
+	 *
+	 * @param array<string, mixed> $payload Moment context data with media_ids.
+	 * @return array{ids: string[], errors: string[]} Mastodon media IDs and failure notes.
+	 */
+	private function upload_image_media( array $payload ): array {
+		$uploaded = array();
+		$errors   = array();
+
+		$attachment_ids = isset( $payload['media_ids'] ) && is_array( $payload['media_ids'] )
+			? array_map( 'absint', $payload['media_ids'] )
+			: array();
+
+		if ( array() === $attachment_ids ) {
+			return array(
+				'ids'    => array(),
+				'errors' => array(),
+			);
+		}
+
+		$client = Moment_Mastodon_Integration::client();
+
+		foreach ( $attachment_ids as $attachment_id ) {
+			if ( count( $uploaded ) >= self::MAX_MEDIA_PER_STATUS ) {
+				break;
+			}
+
+			if ( $attachment_id <= 0 || ! wp_attachment_is_image( $attachment_id ) ) {
+				continue;
+			}
+
+			$file_path = (string) get_attached_file( $attachment_id );
+			$alt_text  = (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+
+			$result = $client->upload_media( $file_path, sanitize_text_field( $alt_text ) );
+
+			if ( is_wp_error( $result ) ) {
+				$errors[] = sprintf(
+					/* translators: 1: attachment ID, 2: error message. */
+					__( 'attachment %1$d: %2$s', 'moment-connector-mastodon' ),
+					$attachment_id,
+					$result->get_error_message()
+				);
+
+				continue;
+			}
+
+			$uploaded[] = $result['id'];
+		}
+
+		return array(
+			'ids'    => $uploaded,
+			'errors' => $errors,
 		);
 	}
 
@@ -132,6 +219,7 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 			'external_url'       => 'https://mastodon.social/@demo/mock-mastodon-' . $post_id,
 			'status'             => 'mocked',
 			'backflow_supported' => false,
+			'media_attached'     => 0,
 			'message'            => __( 'Demo mode — Mastodon not connected.', 'moment-connector-mastodon' ),
 		);
 	}
