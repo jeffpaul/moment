@@ -28,6 +28,8 @@ require_once MOMENT_PLUGIN_DIR . 'includes/class-publisher.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/class-ai-assist.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/class-blocks.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/class-renderer.php';
+require_once MOMENT_PLUGIN_DIR . 'includes/class-federated-comments.php';
+require_once MOMENT_PLUGIN_DIR . 'includes/class-syndication-links.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/connectors/interface-syndication-connector.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/connectors/class-connector-base.php';
 require_once MOMENT_PLUGIN_DIR . 'includes/connectors/class-connector-bluesky.php';

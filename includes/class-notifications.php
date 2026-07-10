@@ -175,6 +175,10 @@ class Moment_Notifications {
 			array(
 				'post__in' => $post_ids,
 				'status'   => 'approve',
+				// Replies only: federation plugins (ATmosphere, Webmention)
+				// also store likes/reposts as comments with their own
+				// comment types — reactions are not notification items.
+				'type'     => 'comment',
 				'number'   => $limit,
 				'orderby'  => 'comment_date_gmt',
 				'order'    => 'DESC',
@@ -204,6 +208,20 @@ class Moment_Notifications {
 		$source_label    = (string) get_comment_meta( $comment_id, '_moment_comment_source_label', true );
 		$source_url      = (string) get_comment_meta( $comment_id, '_moment_comment_external_url', true );
 		$external_author = (string) get_comment_meta( $comment_id, '_moment_comment_external_author', true );
+
+		// Comments delivered by federation plugins (ActivityPub, ATmosphere,
+		// Webmention) carry no _moment_comment_* meta but are social replies
+		// all the same — label them from their own protocol markers.
+		if ( ! $is_imported ) {
+			$federated = Moment_Federated_Comments::detect( $comment );
+
+			if ( null !== $federated ) {
+				$is_imported  = true;
+				$source       = $federated['source'];
+				$source_label = $federated['label'];
+				$source_url   = $federated['url'];
+			}
+		}
 
 		$author = $is_imported && '' !== $external_author
 			? $external_author

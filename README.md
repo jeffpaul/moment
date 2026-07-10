@@ -144,6 +144,32 @@ by platform:
 The pattern is consistent: open protocols (AT, ActivityPub) are
 weekend-sized connectors; platforms with app-review gates are projects.
 
+### Do ActivityPub, ATmosphere, or Webmention work with Moment?
+
+Yes — and they're the *push-based* complement to Moment's connectors.
+Those plugins deliver social replies as native WordPress comments, which
+is exactly Moment's backflow storage, so replies they import appear in
+Moment notifications automatically — labeled with honest source context
+(Moment recognizes each plugin's comment markers):
+
+| Plugin | Covers | Notification label |
+|---|---|---|
+| [ActivityPub](https://wordpress.org/plugins/activitypub/) | Fediverse (Mastodon, Threads, Pixelfed, …) | Reply from the Fediverse |
+| [ATmosphere](https://wordpress.org/plugins/atmosphere/) | Bluesky / AT Protocol | Reply from Bluesky |
+| [Webmention](https://wordpress.org/plugins/webmention/) | IndieWeb + [Bridgy](https://brid.gy) backfeed | Reply via Webmention |
+
+The identity model differs from connectors, and both are valid: Moment
+connectors publish a copy to **your personal account** (replies to that
+copy come back on sync), while ActivityPub/ATmosphere make **your site
+itself the account** (people follow your domain; replies arrive by push,
+live, no syncing). Reactions (likes/reposts) that those plugins store as
+comments are kept out of Moment notifications — replies only.
+
+Moment also renders IndieWeb `u-syndication` markup on Moment posts
+("Also on: Bluesky · Mastodon" links to the syndicated copies), which is
+what Bridgy needs to backfeed replies from those copies as webmentions —
+so connector-based syndication and webmention backfeed compose.
+
 ### Which AI providers power which Moment features?
 
 Moment never talks to an AI vendor directly — it goes through the

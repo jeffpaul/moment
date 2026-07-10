@@ -43,6 +43,13 @@ final class Moment_Plugin {
 	public Moment_Publisher $publisher;
 
 	/**
+	 * Syndication links (u-syndication markup on Moment posts).
+	 *
+	 * @var Moment_Syndication_Links
+	 */
+	public Moment_Syndication_Links $syndication_links;
+
+	/**
 	 * AI Assist adapter.
 	 *
 	 * @var Moment_AI_Assist
@@ -123,6 +130,7 @@ final class Moment_Plugin {
 		$this->blocks               = new Moment_Blocks( $this->renderer );
 		$this->syndication_registry = Moment_Syndication_Registry::instance();
 		$this->notifications        = new Moment_Notifications();
+		$this->syndication_links    = new Moment_Syndication_Links();
 
 		add_action( 'plugins_loaded', array( $this, 'on_plugins_loaded' ) );
 		add_action( 'init', array( $this, 'on_init' ) );
@@ -146,6 +154,7 @@ final class Moment_Plugin {
 	public function on_init(): void {
 		$this->routes->register();
 		$this->blocks->register();
+		$this->syndication_links->register();
 
 		/**
 		 * Fires after built-in Moment connectors are registered.
