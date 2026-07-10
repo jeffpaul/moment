@@ -64,6 +64,11 @@ jobs:
               exit 1
             fi
           done
+          # Every file in the zip must be git-tracked — catches untracked
+          # strays (build caches, local scratch files) .distignore missed.
+          unzip -Z1 moment.zip | sed -n 's|^moment/||p' | grep -v '/$' | grep . | while read -r f; do
+            git ls-files --error-unmatch "$f" >/dev/null 2>&1 || { echo "::error::untracked file in zip: $f"; exit 1; }
+          done
 
       - name: Create GitHub release with zip attached
         env:

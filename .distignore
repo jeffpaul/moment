@@ -24,6 +24,7 @@ package.json
 package-lock.json
 phpcs.xml
 phpcs.xml.dist
+.phpunit.result.cache
 phpunit.xml
 phpunit.xml.dist
 playwright.config.js
