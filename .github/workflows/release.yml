@@ -1,0 +1,73 @@
+name: Release
+
+# Tag-driven release: pushing a v* tag (e.g. v0.1.0) builds the
+# .distignore-filtered distribution zip via wp dist-archive and attaches it
+# to a GitHub release. The zip is the artifact to install for testing and
+# the exact tree that would be committed to the wordpress.org SVN trunk.
+#
+# Guard: the tag must match the plugin's declared version everywhere —
+# moment.php header, MOMENT_VERSION, and readme.txt Stable tag — or the
+# release fails before anything is published.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+jobs:
+  release:
+    name: Build dist zip and publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches declared plugin version
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          header=$(sed -n 's/^ \* Version: //p' moment.php)
+          constant=$(sed -n "s/^define( 'MOMENT_VERSION', '\(.*\)' );$/\1/p" moment.php)
+          stable=$(sed -n 's/^Stable tag: //p' readme.txt)
+          echo "tag=$tag_version header=$header constant=$constant stable=$stable"
+          for v in "$header" "$constant" "$stable"; do
+            if [ "$v" != "$tag_version" ]; then
+              echo "::error::Version mismatch: tag v$tag_version vs declared '$v'"
+              exit 1
+            fi
+          done
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@0f7f1d08e3e32076e51cae65eb0b0c871405b16e # 2.34.1
+        with:
+          php-version: '8.3'
+          tools: wp-cli
+
+      - name: Build distribution zip
+        run: |
+          wp package install wp-cli/dist-archive-command:@stable
+          wp dist-archive . "$PWD/moment.zip"
+          unzip -l moment.zip
+
+      - name: Guard the zip contents
+        run: |
+          listing=$(unzip -l moment.zip)
+          echo "$listing" | grep -q 'moment/readme.txt' || { echo '::error::readme.txt missing from zip'; exit 1; }
+          echo "$listing" | grep -q 'moment/moment.php' || { echo '::error::moment.php missing from zip'; exit 1; }
+          for banned in 'moment/tests/' 'moment/docs/' 'moment/README.md' 'moment/CLAUDE.md' 'moment/node_modules/' 'moment/vendor/' 'moment/moment-connector-'; do
+            if echo "$listing" | grep -q "$banned"; then
+              echo "::error::dev file leaked into zip: $banned"
+              exit 1
+            fi
+          done
+
+      - name: Create GitHub release with zip attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" moment.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Moment ${GITHUB_REF_NAME#v}" \
+            --generate-notes
