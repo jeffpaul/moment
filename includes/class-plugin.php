@@ -50,6 +50,13 @@ final class Moment_Plugin {
 	public Moment_Syndication_Links $syndication_links;
 
 	/**
+	 * Automatic backflow sync (cron + on-view freshening).
+	 *
+	 * @var Moment_Backflow_Sync
+	 */
+	public Moment_Backflow_Sync $backflow_sync;
+
+	/**
 	 * AI Assist adapter.
 	 *
 	 * @var Moment_AI_Assist
@@ -131,6 +138,7 @@ final class Moment_Plugin {
 		$this->syndication_registry = Moment_Syndication_Registry::instance();
 		$this->notifications        = new Moment_Notifications();
 		$this->syndication_links    = new Moment_Syndication_Links();
+		$this->backflow_sync        = new Moment_Backflow_Sync();
 
 		add_action( 'plugins_loaded', array( $this, 'on_plugins_loaded' ) );
 		add_action( 'init', array( $this, 'on_init' ) );
@@ -155,6 +163,7 @@ final class Moment_Plugin {
 		$this->routes->register();
 		$this->blocks->register();
 		$this->syndication_links->register();
+		$this->backflow_sync->register();
 
 		/**
 		 * Fires after built-in Moment connectors are registered.
@@ -178,6 +187,7 @@ final class Moment_Plugin {
 	 * @return void
 	 */
 	public static function activate(): void {
+		Moment_Backflow_Sync::schedule();
 		// Register rewrite rules so the flush below picks them up.
 		$routes = new Moment_Routes();
 		$routes->register();
@@ -199,6 +209,7 @@ final class Moment_Plugin {
 	 * @return void
 	 */
 	public static function deactivate(): void {
+		Moment_Backflow_Sync::unschedule();
 		flush_rewrite_rules();
 	}
 

@@ -320,6 +320,10 @@ class Moment_REST_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function get_notifications( WP_REST_Request $request ) {
+		// Viewing the feed freshens it: a stale feed schedules an async
+		// background sync (never a manual control, never blocks this request).
+		Moment_Plugin::instance()->backflow_sync->maybe_freshen();
+
 		unset( $request ); // No query args yet; Moment-only scope is enforced server-side.
 
 		return rest_ensure_response( Moment_Plugin::instance()->notifications->get_notifications() );

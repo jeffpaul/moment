@@ -76,12 +76,14 @@ WordPress 7.0 **Connectors API**, so it feels core-native:
    shows **Connected**. Note and mixed Moments publish for real — the
    caption plus a link back to your post, and the Bluesky post URL is
    stored on the Moment (`_moment_external_posts`).
-6. **Pull replies back**: syncing responses (the
-   `POST /moment/v1/moments/{id}/sync-responses` endpoint the app uses)
+6. **Replies come back automatically**: an hourly background sync (plus
+   an opportunistic freshen whenever the notifications feed is viewed)
    fetches actual replies from your Bluesky thread and imports them as
    WordPress comments labeled "Reply from Bluesky", deduplicated by
-   reply ID — safe to sync repeatedly. They appear on the post and in
-   `/moment/notifications`.
+   reply ID. No manual sync step exists — they appear on the post and
+   in `/moment/notifications` on their own. (The
+   `POST /moment/v1/moments/{id}/sync-responses` endpoint remains for
+   demos and integrations.)
 
 If the connector is not configured (or a Bluesky call fails), publishing
 never blocks — the connector degrades to the same mocked behavior as the
