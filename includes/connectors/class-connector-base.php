@@ -2,7 +2,7 @@
 /**
  * Abstract base for mocked syndication connectors.
  *
- * Centralizes the prototype's demo behavior: no real credentials, no
+ * Centralizes the demo connectors' behavior: no real credentials, no
  * real network calls, deterministic fake external IDs and URLs. A real
  * connector may extend this class or implement the interface directly.
  *
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Shared mock behavior for built-in prototype connectors.
+ * Shared mock behavior for the built-in demo connectors.
  */
 abstract class Moment_Connector_Base implements Moment_Syndication_Connector {
 
@@ -52,7 +52,7 @@ abstract class Moment_Connector_Base implements Moment_Syndication_Connector {
 	}
 
 	/**
-	 * Prototype connectors are never connected — no credentials exist.
+	 * Demo connectors are never connected — no credentials exist.
 	 *
 	 * @return bool
 	 */

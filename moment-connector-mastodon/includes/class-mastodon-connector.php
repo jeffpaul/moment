@@ -143,7 +143,7 @@ class Moment_Mastodon_Connector implements Moment_Syndication_Connector {
 	/**
 	 * Upload the Moment's image attachments to Mastodon.
 	 *
-	 * Only images are uploaded in the prototype — video/audio go through
+	 * Only images are uploaded — video/audio go through
 	 * Mastodon's async processing pipeline (202 + polling), which is out of
 	 * scope; text + permalink still covers them. Alt text becomes the media
 	 * description. Individual failures are collected, never thrown, and

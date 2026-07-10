@@ -64,7 +64,7 @@ class Moment_Mastodon_Client {
 	 * has no native multipart support). Mastodon returns 200 when processing
 	 * is complete or 202 when accepted but still processing; for images the
 	 * processing is effectively synchronous, so either code with an ID is
-	 * treated as success (no polling in the prototype).
+	 * treated as success (no polling needed).
 	 *
 	 * @param string $file_path   Absolute path to a local media file.
 	 * @param string $description Alt text for the media (optional).

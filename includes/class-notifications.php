@@ -2,7 +2,8 @@
 /**
  * Moment Notifications and Conversation Backflow
  *
- * Current state: prototype with mocked imports.
+ * Imports are mocked by default; real connector plugins take over via
+ * the `moment_import_network_responses` filter.
  *
  * Imported social responses are stored as standard WordPress comments on
  * the original Moment post, so they render alongside on-site comments in
@@ -148,7 +149,7 @@ class Moment_Notifications {
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
 				'no_found_rows'  => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Prototype-scale Moment lookup.
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Personal-site-scale Moment lookup.
 				'meta_query'     => array(
 					array(
 						'key'   => '_moment_is_moment',
@@ -488,7 +489,7 @@ class Moment_Notifications {
 		$existing = get_comments(
 			array(
 				'count'      => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Prototype-scale dedup lookup.
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Personal-site-scale dedup lookup.
 				'meta_key'   => '_moment_comment_external_id',
 				'meta_value' => $external_id,
 			)

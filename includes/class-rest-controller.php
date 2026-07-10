@@ -232,7 +232,7 @@ class Moment_REST_Controller extends WP_REST_Controller {
 				'orderby'        => 'date',
 				'order'          => 'DESC',
 				'no_found_rows'  => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Prototype-scale Moment lookup.
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Personal-site-scale Moment lookup.
 				'meta_key'       => '_moment_is_moment',
 				'meta_value'     => '1',
 			)

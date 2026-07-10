@@ -195,8 +195,9 @@ class Moment_Syndication_Registry {
 	}
 
 	/**
-	 * Publish a Moment to the selected destinations (all mocked in the
-	 * prototype) and record the results in post meta.
+	 * Publish a Moment to the selected destinations (built-in demo
+	 * connectors mock; connector plugins publish for real) and record the
+	 * results in post meta.
 	 *
 	 * Unknown connector IDs are skipped. Successful results are merged
 	 * into `_moment_external_posts` (a JSON object keyed by connector
@@ -247,7 +248,7 @@ class Moment_Syndication_Registry {
 
 		/**
 		 * Fires after Moment has attempted publishing to all selected
-		 * destinations (mocked in the prototype).
+		 * destinations.
 		 *
 		 * @param int                                  $post_id Moment post ID.
 		 * @param array<string, array<string, mixed>> $results Publish results keyed by connector ID.

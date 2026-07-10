@@ -550,7 +550,7 @@
 			const body = this.el.querySelector('[data-sheet-body]');
 			try {
 				// Note: files are not uploaded until publish, so no attachment
-				// IDs exist yet; media_ids is empty in the prototype flow.
+				// IDs exist yet; media_ids is empty at suggestion time.
 				const suggestions = await apiPost('ai/suggestions', {
 					text: state.caption,
 					media_ids: [],

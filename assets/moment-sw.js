@@ -15,7 +15,7 @@
  * This worker is served from /wp-content/plugins/moment/assets/, so its
  * maximum scope is that directory — it CANNOT control the /moment page
  * itself, and we deliberately do NOT add a Service-Worker-Allowed header
- * to widen the scope. That is fine for this prototype:
+ * to widen the scope. That is fine here:
  * - install-time precaching below still populates the Cache Storage with
  *   app.css and app.js regardless of scope, satisfying the PWA
  *   installability + offline-asset checks;

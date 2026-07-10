@@ -18,8 +18,8 @@
  * unprompted. Per-response deduplication (by external ID) makes repeated
  * syncs safe; a per-post cooldown keeps polling polite.
  *
- * WP-Cron caveat (prototype-acceptable): schedules fire on page traffic
- * unless the site wires system cron to wp-cron.php.
+ * WP-Cron caveat (acceptable at personal-site scale): schedules fire on
+ * page traffic unless the site wires system cron to wp-cron.php.
  *
  * @package Moment
  */
@@ -148,7 +148,7 @@ class Moment_Backflow_Sync {
 				'date_query'     => array(
 					array( 'after' => $days . ' days ago' ),
 				),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Prototype-scale Moment lookup.
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Personal-site-scale Moment lookup.
 				'meta_query'     => array(
 					array(
 						'key'   => '_moment_is_moment',

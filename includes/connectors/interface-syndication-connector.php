@@ -44,7 +44,8 @@ interface Moment_Syndication_Connector {
 	/**
 	 * True only if credentials are configured and the connection is live.
 	 *
-	 * Always false in the prototype — every connector is mocked.
+	 * Always false for the built-in demo connectors; real connector
+	 * plugins report their configured state.
 	 *
 	 * @return bool
 	 */

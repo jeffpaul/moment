@@ -113,8 +113,7 @@ class Moment_AI_Assist {
 	 * Suggest alt text for an attachment.
 	 *
 	 * The real path prompts from textual context only (caption, filename,
-	 * attachment title) — it does not upload media bytes to the provider in
-	 * this prototype.
+	 * attachment title) — media bytes are never uploaded to the provider.
 	 *
 	 * @param int   $attachment_id Attachment post ID.
 	 * @param array $context       Context: text, media_count, media_types, filename.

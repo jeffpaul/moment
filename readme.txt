@@ -36,7 +36,7 @@ This plugin does not send data to any external service. The bundled demonstratio
 
 = AI-assisted development =
 
-This plugin was generated with Claude Code working from the Project Moment specification documents, with human guidance, review, and testing throughout — every build phase was gated on verification against a live WordPress site, and the test suites (PHPUnit, WP-CLI smoke, browser E2E) exist to keep that review honest. Treat it as an AI-generated, human-directed prototype.
+This plugin was generated with Claude Code working from the Project Moment specification documents, with human guidance, review, and testing throughout — every build phase was gated on verification against a live WordPress site, and the test suites (PHPUnit, WP-CLI smoke, browser E2E) exist to keep that review honest. Treat it as AI-generated, human-directed software.
 
 == Installation ==
 
@@ -84,7 +84,7 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 == Changelog ==
 
 = 0.1.0 =
-* Initial prototype release.
+* Initial release.
 * Phone-first `/moment` app shell with Home, Create, Publish, and Notifications screens; PWA manifest and home-screen support.
 * Publishing pipeline creating standard WordPress posts with block markup for image, video, audio, podcast, note, gallery, and mixed Moments.
 * REST API under `/wp-json/moment/v1/` (moments, AI suggestions, response sync, notifications).

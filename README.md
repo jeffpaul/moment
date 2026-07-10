@@ -10,7 +10,7 @@ user visits `/moment`, picks media from the camera roll, adds a caption,
 and publishes a standard WordPress post — the site stays the canonical
 source of truth.
 
-**Status:** prototype. App shell, REST API, and home-screen/PWA support
+**Status:** early release. App shell, REST API, and home-screen/PWA support
 are in place; see "Using Moment Like a Phone App" below.
 
 ## Colors
@@ -24,9 +24,9 @@ The Moment brand palette is a range of purples:
 | Light purple | `#D7A7FF` | Tints, highlights, chips, subtle backgrounds |
 | Transparent purple | `rgba(122, 0, 223, 0.12)` | Washes, focus rings, selected states |
 
-> The prototype app shell currently ships a neutral near-black palette in
-> `assets/app.css` (see the `--moment-*` custom properties); these purples are
-> the documented brand direction to migrate toward.
+> The app shell applies these purples throughout via the `--moment-accent*`
+> custom properties in `assets/app.css`; the manifest theme color and app
+> icon use the same palette.
 
 ## AI-assisted development
 
@@ -35,7 +35,7 @@ working from the Project Moment specification documents, with human guidance,
 review, and testing throughout — every build phase was gated on verification
 against a live WordPress site, and the test suites (PHPUnit, WP-CLI smoke,
 browser E2E) exist to keep that review honest. Treat it as an AI-generated,
-human-directed prototype.
+human-directed software.
 
 ## Requirements
 
@@ -217,7 +217,7 @@ redirected to the WordPress login screen and then back to Moment).
 2. Tap the **⋮** menu.
 3. Tap **Add to Home Screen** (or **Install App** when Chrome offers it).
 
-### What to expect (prototype)
+### What to expect
 
 - The home-screen icon launches Moment as a browser shortcut. Full
   standalone display (`display: standalone` in the manifest, no browser
