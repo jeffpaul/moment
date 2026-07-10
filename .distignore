@@ -2,6 +2,7 @@
 .claude
 .git
 .github
+.wordpress-org
 bin
 moment-connector-bluesky
 moment-connector-mastodon
