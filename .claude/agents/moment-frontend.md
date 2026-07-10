@@ -224,9 +224,9 @@ In Phase 8, you will add:
 
 ## Documents to read before starting
 
-- `project-moment/04_prototype_mvp_spec.md` — UI requirements section
-- `project-moment/06_visual_mockup_brief.md` — visual direction
-- `project-moment/10_home_screen_and_pwa_instructions.md` — PWA requirements
+- `docs/04_prototype_mvp_spec.md` — UI requirements section
+- `docs/06_visual_mockup_brief.md` — visual direction
+- `docs/10_home_screen_and_pwa_instructions.md` — PWA requirements
 
 ## Output contract
 

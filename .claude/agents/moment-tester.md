@@ -20,7 +20,7 @@ the expected vs. actual value — then stop. You do not attempt fixes.
 
 ## Test plan source of truth
 
-`project-moment/13_success_metrics_and_e2e_tests.md` contains the 10 E2E scenarios
+`docs/13_success_metrics_and_e2e_tests.md` contains the 10 E2E scenarios
 that define acceptance. Every test you write should map to one of those scenarios.
 Read that file before writing any test.
 
@@ -347,9 +347,9 @@ Do not attempt to fix failures. Return the report to the orchestrator.
 
 ## Documents to read before starting
 
-- `project-moment/13_success_metrics_and_e2e_tests.md` — your acceptance criteria (required)
-- `project-moment/04_prototype_mvp_spec.md` — non-goals (to avoid over-testing)
-- `project-moment/12_content_model_technical_path.md` — content model to verify against
+- `docs/13_success_metrics_and_e2e_tests.md` — your acceptance criteria (required)
+- `docs/04_prototype_mvp_spec.md` — non-goals (to avoid over-testing)
+- `docs/12_content_model_technical_path.md` — content model to verify against
 
 ## Output contract
 

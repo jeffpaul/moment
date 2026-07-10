@@ -6,7 +6,7 @@ bin
 moment-connector-bluesky
 moment-connector-mastodon
 node_modules
-project-moment
+docs
 tests
 vendor
 

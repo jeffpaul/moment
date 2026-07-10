@@ -33,7 +33,7 @@
 | Plugin path | ~/Local Sites/wp70/app/public/wp-content/plugins/moment (symlink → ~/GitHub/jeffpaul/moment) |
 | Local environment | Local by Flywheel (site: wp70) |
 
-**Repo layout note:** This repo root IS the plugin. `moment.php` lives at the repo root, and the repo is symlinked into the wp70 site's plugins directory as `moment/`. The `project-moment/` docs and `.claude/` are excluded from distribution via `.distignore`. Runtime gates (`wp plugin activate`, `wp eval`) run from `~/Local Sites/wp70/app/public` and require the wp70 site to be started in Local.
+**Repo layout note:** This repo root IS the plugin. `moment.php` lives at the repo root, and the repo is symlinked into the wp70 site's plugins directory as `moment/`. The `docs/` directory and `.claude/` are excluded from distribution via `.distignore`. Runtime gates (`wp plugin activate`, `wp eval`) run from `~/Local Sites/wp70/app/public` and require the wp70 site to be started in Local.
 
 ## Build commands
 
@@ -160,7 +160,7 @@ These agents are defined in `.claude/agents/`. The orchestrator delegates to the
 
 ## Project artifact context
 
-These files are loaded into context at session start. All are in the project-moment/ directory.
+These files are loaded into context at session start. All are in the docs/ directory.
 
 | File | Purpose |
 |------|---------|

@@ -228,9 +228,9 @@ wp eval "echo class_exists('Moment_Notifications') ? 'PASS' : 'FAIL';"
 
 ## Documents to read before starting
 
-- `project-moment/11_conversation_backflow_notifications.md` — product model (authoritative)
-- `project-moment/04_prototype_mvp_spec.md` — backflow scope (prototype only)
-- `project-moment/13_success_metrics_and_e2e_tests.md` — tests 7 and 8 (your acceptance criteria)
+- `docs/11_conversation_backflow_notifications.md` — product model (authoritative)
+- `docs/04_prototype_mvp_spec.md` — backflow scope (prototype only)
+- `docs/13_success_metrics_and_e2e_tests.md` — tests 7 and 8 (your acceptance criteria)
 
 ## Output contract
 

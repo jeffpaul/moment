@@ -249,9 +249,9 @@ Add this comment block at the top of `class-syndication-registry.php`:
 
 ## Documents to read before starting
 
-- `project-moment/09_default_syndication_routing.md` — routing model and connector strategy
-- `project-moment/04_prototype_mvp_spec.md` — syndication scope (prototype only)
-- `project-moment/08_decisions_and_open_questions.md` — connector decisions
+- `docs/09_default_syndication_routing.md` — routing model and connector strategy
+- `docs/04_prototype_mvp_spec.md` — syndication scope (prototype only)
+- `docs/08_decisions_and_open_questions.md` — connector decisions
 
 ## Output contract
 

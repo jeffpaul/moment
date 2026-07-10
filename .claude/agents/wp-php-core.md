@@ -137,9 +137,9 @@ Add a developer comment on every mock return:
 ## Documents to read before starting
 
 Always read these before writing any code:
-- `project-moment/12_content_model_technical_path.md` — authoritative content model
-- `project-moment/04_prototype_mvp_spec.md` — implementation scope
-- `project-moment/08_decisions_and_open_questions.md` — resolved constraints
+- `docs/12_content_model_technical_path.md` — authoritative content model
+- `docs/04_prototype_mvp_spec.md` — implementation scope
+- `docs/08_decisions_and_open_questions.md` — resolved constraints
 
 ## Output contract
 
