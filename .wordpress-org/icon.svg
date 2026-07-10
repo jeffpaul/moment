@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Moment icon: a play button becoming an upward arrow">
+	<defs>
+		<radialGradient id="bg" cx="50%" cy="46%" r="72%">
+			<stop offset="0%" stop-color="#150d28"/>
+			<stop offset="70%" stop-color="#0c0618"/>
+			<stop offset="100%" stop-color="#07030f"/>
+		</radialGradient>
+		<linearGradient id="tileStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+			<stop offset="0%" stop-color="#9b4dff"/>
+			<stop offset="100%" stop-color="#6a1fd0"/>
+		</linearGradient>
+		<linearGradient id="tri" x1="12%" y1="8%" x2="70%" y2="100%">
+			<stop offset="0%" stop-color="#b168fa"/>
+			<stop offset="100%" stop-color="#6322dc"/>
+		</linearGradient>
+		<linearGradient id="arrow" x1="30%" y1="100%" x2="70%" y2="0%">
+			<stop offset="0%" stop-color="#dda4f2"/>
+			<stop offset="100%" stop-color="#f8efff"/>
+		</linearGradient>
+		<filter id="glowSoft" x="-40%" y="-40%" width="180%" height="180%">
+			<feGaussianBlur stdDeviation="14" result="blur"/>
+			<feMerge>
+				<feMergeNode in="blur"/>
+				<feMergeNode in="SourceGraphic"/>
+			</feMerge>
+		</filter>
+		<filter id="glowWide" x="-60%" y="-60%" width="220%" height="220%">
+			<feGaussianBlur stdDeviation="26" result="blur"/>
+			<feMerge>
+				<feMergeNode in="blur"/>
+				<feMergeNode in="SourceGraphic"/>
+			</feMerge>
+		</filter>
+	</defs>
+
+	<!-- Full-bleed backdrop -->
+	<rect width="1024" height="1024" fill="url(#bg)"/>
+
+	<!-- Glowing app tile -->
+	<rect x="100" y="100" width="824" height="824" rx="150" fill="#110a20"/>
+	<rect x="100" y="100" width="824" height="824" rx="150" fill="none" stroke="url(#tileStroke)" stroke-width="6" opacity="0.95" filter="url(#glowWide)"/>
+
+	<!-- Play triangle (rounded via stroke-linejoin) -->
+	<g filter="url(#glowSoft)">
+		<path d="M 272 362 L 272 748 L 598 555 Z" fill="url(#tri)" stroke="url(#tri)" stroke-width="90" stroke-linejoin="round"/>
+	</g>
+
+	<!-- Page-curl highlight along the arrow's left edge over the triangle -->
+	<path d="M 500 755 Q 622 665 660 535 Q 652 685 545 772 Z" fill="#e8c8f8" opacity="0.6"/>
+
+	<!-- Upward swoosh arrow: shaft tucks behind the head -->
+	<g filter="url(#glowSoft)">
+		<path d="M 488 762 C 634 710 712 612 736 478 C 742 443 746 408 746 366" fill="none" stroke="url(#arrow)" stroke-width="88" stroke-linecap="round"/>
+		<path d="M 748 212 L 598 386 L 898 386 Z" fill="url(#arrow)" stroke="url(#arrow)" stroke-width="28" stroke-linejoin="round"/>
+	</g>
+</svg>
