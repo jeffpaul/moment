@@ -4,7 +4,7 @@ Tags: publishing, mobile, pwa, syndication, indieweb
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 
 == Changelog ==
 
+= 0.1.1 =
+* App shell CSS/JS now load through the WordPress enqueue API (registered handles, inline bootstrap config via wp_add_inline_script, defer strategy).
+* Tightened REST API capability checks: draft Moments list only for users who can edit them, notifications are scoped to Moments the current user can edit, syncing responses requires edit_post on the target, and attaching media requires upload_files.
+* Reworded the plugin description per wordpress.org review guidelines.
+
 = 0.1.0 =
 * Initial release.
 * Phone-first `/moment` app shell with Home, Create, Publish, and Notifications screens; PWA manifest and home-screen support.
@@ -95,6 +100,9 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 * Timeline and per-type views as both shortcodes and dynamic blocks.
 
 == Upgrade Notice ==
+
+= 0.1.1 =
+Tightens REST API capability checks and moves app assets to the WordPress enqueue API.
 
 = 0.1.0 =
 Initial release.
