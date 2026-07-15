@@ -14,7 +14,7 @@ Personal Site Publisher Mode for WordPress: capture, caption, and publish Moment
 
 Moment is a phone-first publishing experience for WordPress. A logged-in user visits `/moment`, picks media from the camera roll, adds a caption, and publishes a standard WordPress post — the site stays the canonical source of truth.
 
-WordPress does not need to become a social network. It needs to become the best place for social-shaped content to begin.
+WordPress does not need to become a social network. Moment makes your own site the starting point for social-shaped content: publish once on your domain, syndicate outward, and let the conversation flow back.
 
 = What you get =
 
