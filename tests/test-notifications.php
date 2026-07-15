@@ -12,6 +12,10 @@ class Test_Notifications extends WP_UnitTestCase {
 
 	/** Scenario 8: comments on non-Moment posts are excluded. */
 	public function test_excludes_normal_post_comments() {
+		// Notifications are scoped to posts the user can edit; an editor
+		// sees all of them, so the Moment-only exclusion is what's tested.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
 		$normal_post = self::factory()->post->create( array( 'post_type' => 'post' ) );
 		$comment_id  = self::factory()->comment->create( array( 'comment_post_ID' => $normal_post ) );
 

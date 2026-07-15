@@ -118,7 +118,7 @@ class Moment_REST_Controller extends WP_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'sync_responses' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
+				'permission_callback' => array( $this, 'permissions_check_post' ),
 				'args'                => array(
 					'id' => array(
 						'type'              => 'integer',
@@ -172,6 +172,36 @@ class Moment_REST_Controller extends WP_REST_Controller {
 	}
 
 	/**
+	 * Per-post permission callback: the shared check plus edit_post on the
+	 * targeted Moment, so users cannot act on posts they cannot edit.
+	 *
+	 * A nonexistent post passes through to the handler, which returns its
+	 * regular 404 — only a real post the user cannot edit is a 403.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return true|WP_Error
+	 */
+	public function permissions_check_post( WP_REST_Request $request ) {
+		$shared = $this->permissions_check( $request );
+
+		if ( true !== $shared ) {
+			return $shared;
+		}
+
+		$post_id = absint( $request->get_param( 'id' ) );
+
+		if ( get_post( $post_id ) && ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You cannot manage responses for this Moment.', 'moment' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		return true;
+	}
+
+	/**
 	 * POST /moment/v1/moments — create a Moment.
 	 *
 	 * Accepts multipart file uploads plus caption/type/target fields and
@@ -182,6 +212,14 @@ class Moment_REST_Controller extends WP_REST_Controller {
 	 */
 	public function create_moment( WP_REST_Request $request ) {
 		$files = $request->get_file_params();
+
+		if ( ! empty( $files ) && ! current_user_can( 'upload_files' ) ) {
+			return new WP_Error(
+				'rest_cannot_upload',
+				__( 'You are not allowed to upload media.', 'moment' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
 
 		// Canonical multipart field for destinations is `targets[]`; accept
 		// the older `syndication_targets` name as a fallback.
@@ -241,6 +279,13 @@ class Moment_REST_Controller extends WP_REST_Controller {
 		$moments = array();
 
 		foreach ( $query->posts as $post ) {
+			// Published Moments are public; drafts are only listed for
+			// users who can edit that specific post (authors see their
+			// own, editors see all).
+			if ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post->ID ) ) {
+				continue;
+			}
+
 			$moments[] = $this->prepare_moment_summary( $post->ID );
 		}
 

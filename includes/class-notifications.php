@@ -110,11 +110,22 @@ class Moment_Notifications {
 	 * because the comment query is restricted to post IDs that carry
 	 * _moment_is_moment = 1. This is not a client-side filter.
 	 *
+	 * Scoped per user: notifications are replies to Moments the current
+	 * user can edit (authors get their own posts' activity; editors and
+	 * admins get all of it) — never other authors' draft activity.
+	 *
 	 * @param int $limit Maximum items to return.
 	 * @return array<int, array<string, mixed>> Notification items, newest first.
 	 */
 	public function get_notifications( int $limit = self::DEFAULT_LIMIT ): array {
-		$moment_post_ids = $this->get_moment_post_ids();
+		$moment_post_ids = array_values(
+			array_filter(
+				$this->get_moment_post_ids(),
+				static function ( $post_id ) {
+					return current_user_can( 'edit_post', $post_id );
+				}
+			)
+		);
 
 		if ( empty( $moment_post_ids ) ) {
 			return array();
