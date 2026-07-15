@@ -96,6 +96,31 @@ $moment_config = array(
 		'displayName' => $moment_user->display_name,
 	),
 );
+
+/*
+ * The app's assets go through the script/style API (registration,
+ * versioning, dedupe, defer strategy, inline config) but are printed
+ * per-handle below instead of via wp_head()/wp_footer(), keeping the
+ * shell free of theme and admin chrome.
+ */
+wp_register_style( 'moment-app', MOMENT_PLUGIN_URL . 'assets/app.css', array(), MOMENT_VERSION );
+wp_register_script(
+	'moment-app',
+	MOMENT_PLUGIN_URL . 'assets/app.js',
+	array(),
+	MOMENT_VERSION,
+	array(
+		'in_footer' => true,
+		'strategy'  => 'defer',
+	)
+);
+wp_add_inline_script(
+	'moment-app',
+	'window.momentApp = ' . wp_json_encode( $moment_config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';',
+	'before'
+);
+wp_enqueue_style( 'moment-app' );
+wp_enqueue_script( 'moment-app' );
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -112,7 +137,7 @@ $moment_config = array(
 	<?php /* iOS ignores SVG here; icon-192.png is generated from assets/icon.svg (see README). */ ?>
 	<link rel="apple-touch-icon" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/icon-192.png' ); ?>" />
 	<link rel="icon" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/icon.svg' ); ?>" type="image/svg+xml" />
-	<link rel="stylesheet" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/app.css?ver=' . MOMENT_VERSION ); ?>" />
+	<?php wp_print_styles( array( 'moment-app' ) ); ?>
 </head>
 <body class="moment-app moment-app--<?php echo esc_attr( $moment_screen ); ?>">
 	<div id="moment-app" class="moment-shell">
@@ -121,9 +146,6 @@ $moment_config = array(
 	<noscript>
 		<p class="moment-noscript"><?php esc_html_e( 'Moment needs JavaScript. Please enable it and reload.', 'moment' ); ?></p>
 	</noscript>
-	<script>
-		window.momentApp = <?php echo wp_json_encode( $moment_config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ); ?>;
-	</script>
-	<script src="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/app.js?ver=' . MOMENT_VERSION ); ?>" defer></script>
+	<?php wp_print_scripts( array( 'moment-app' ) ); ?>
 </body>
 </html>
