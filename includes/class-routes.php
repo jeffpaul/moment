@@ -51,6 +51,7 @@ class Moment_Routes {
 
 		add_filter( 'query_vars', array( $this, 'register_query_var' ) );
 		add_filter( 'template_include', array( $this, 'maybe_load_app_shell' ) );
+		add_filter( 'redirect_canonical', array( $this, 'skip_canonical_for_manifest' ) );
 
 		// Installs that predate the option just resolved it: persist the
 		// rules registered above so the app URL works without a manual
@@ -157,6 +158,24 @@ class Moment_Routes {
 		$vars[] = self::QUERY_VAR;
 
 		return $vars;
+	}
+
+	/**
+	 * Serve the manifest without the canonical trailing-slash 301.
+	 *
+	 * WordPress's redirect_canonical would bounce {base}/manifest.json to
+	 * a slash-suffixed URL before the JSON is served — one wasted hop on
+	 * every PWA manifest fetch.
+	 *
+	 * @param string|false $redirect_url The canonical redirect target.
+	 * @return string|false False cancels the redirect for manifest requests.
+	 */
+	public function skip_canonical_for_manifest( $redirect_url ) {
+		if ( 'manifest' === get_query_var( self::QUERY_VAR ) ) {
+			return false;
+		}
+
+		return $redirect_url;
 	}
 
 	/**

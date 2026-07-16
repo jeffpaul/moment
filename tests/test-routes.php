@@ -79,6 +79,25 @@ class Test_Routes extends WP_UnitTestCase {
 		$this->assertSame( 'moment-app', Moment_Routes::resolve_app_base(), 'Re-activation re-resolves' );
 	}
 
+	/** Manifest requests skip the canonical trailing-slash redirect. */
+	public function test_manifest_skips_canonical_redirect() {
+		$routes = new Moment_Routes();
+		$routes->register();
+
+		set_query_var( Moment_Routes::QUERY_VAR, 'manifest' );
+		$this->assertFalse(
+			apply_filters( 'redirect_canonical', home_url( '/moment/manifest.json/' ) ),
+			'Manifest must serve directly, not bounce through a 301'
+		);
+
+		set_query_var( Moment_Routes::QUERY_VAR, '' );
+		$this->assertSame(
+			home_url( '/somewhere/' ),
+			apply_filters( 'redirect_canonical', home_url( '/somewhere/' ) ),
+			'Other requests keep normal canonical redirects'
+		);
+	}
+
 	/** The manifest tracks the resolved base and uses plugin-URL icons. */
 	public function test_manifest_tracks_base() {
 		self::factory()->post->create( array( 'post_type' => 'page', 'post_name' => 'moment' ) );
