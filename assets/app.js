@@ -437,7 +437,7 @@
 			// tapping one reopens the composer instead of the permalink.
 			const isDraft = item.status && 'publish' !== item.status;
 			const draftChip = isDraft
-				? ' <span class="moment-chip moment-chip--draft">Draft</span>'
+				? '<span class="moment-chip moment-chip--draft">Draft</span> '
 				: '';
 			const href = isDraft ? '#create' : item.permalink || '#home';
 			const editAttr = isDraft ? ` data-edit-draft="${esc(String(item.id))}"` : '';
@@ -445,10 +445,10 @@
 			<a class="moment-recent__item" href="${esc(href)}"${editAttr}>
 				${thumb}
 				<span class="moment-recent__body">
-					<span class="moment-recent__title">${esc(title)}${draftChip}</span>
-					<span class="moment-recent__meta">${esc(TYPE_LABELS[item.type] || item.type || '')}${
-						item.date ? ' · ' + esc(relativeTime(item.date)) : ''
-					}</span>
+					<span class="moment-recent__title">${esc(title)}</span>
+					<span class="moment-recent__meta">${draftChip}${esc(
+						TYPE_LABELS[item.type] || item.type || ''
+					)}${item.date ? ' · ' + esc(relativeTime(item.date)) : ''}</span>
 				</span>
 			</a>`;
 		},
