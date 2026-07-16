@@ -335,6 +335,10 @@
 				</a>
 			</header>
 			<section class="moment-screen">
+				<section class="moment-recent" data-drafts-section hidden aria-labelledby="moment-drafts-heading">
+					<h2 id="moment-drafts-heading" class="moment-section-heading">Drafts</h2>
+					<div class="moment-recent__list" data-drafts-list></div>
+				</section>
 				<section class="moment-recent" aria-labelledby="moment-recent-heading">
 					<h2 id="moment-recent-heading" class="moment-section-heading">Recent Moments</h2>
 					<div class="moment-recent__list" data-recent-list aria-live="polite">
@@ -369,29 +373,48 @@
 			});
 		},
 
+		bindDraftTaps(container) {
+			container.querySelectorAll('[data-edit-draft]').forEach((row) => {
+				row.addEventListener('click', (event) => {
+					event.preventDefault();
+					row.setAttribute('aria-busy', 'true');
+					openDraft(row.getAttribute('data-edit-draft')).catch(() => {
+						row.removeAttribute('aria-busy');
+					});
+				});
+			});
+		},
+
 		async init() {
 			const list = root.querySelector('[data-recent-list]');
+			const draftsSection = root.querySelector('[data-drafts-section]');
+			const draftsList = root.querySelector('[data-drafts-list]');
 			try {
-				const moments = await apiGet('moments');
+				// Drafts are fetched separately so they stay reachable no
+				// matter how many Moments have published since.
+				const [drafts, published] = await Promise.all([
+					apiGet('moments?status=draft&per_page=10'),
+					apiGet('moments?status=publish'),
+				]);
 				if (!list || !list.isConnected) {
 					return;
 				}
-				const items = Array.isArray(moments) ? moments.slice(0, 5) : [];
+
+				const draftItems = Array.isArray(drafts) ? drafts : [];
+				if (draftItems.length && draftsSection && draftsList) {
+					draftsList.innerHTML = draftItems.map((item) => this.renderItem(item)).join('');
+					draftsSection.hidden = false;
+					this.bindDraftTaps(draftsList);
+				}
+
+				const items = Array.isArray(published) ? published.slice(0, 5) : [];
 				if (!items.length) {
-					list.innerHTML =
-						'<p class="moment-empty">Nothing here yet. Create your first Moment.</p>';
+					list.innerHTML = draftItems.length
+						? '<p class="moment-empty">Nothing published yet.</p>'
+						: '<p class="moment-empty">Nothing here yet. Create your first Moment.</p>';
 					return;
 				}
 				list.innerHTML = items.map((item) => this.renderItem(item)).join('');
-				list.querySelectorAll('[data-edit-draft]').forEach((row) => {
-					row.addEventListener('click', (event) => {
-						event.preventDefault();
-						row.setAttribute('aria-busy', 'true');
-						openDraft(row.getAttribute('data-edit-draft')).catch(() => {
-							row.removeAttribute('aria-busy');
-						});
-					});
-				});
 			} catch (err) {
 				if (list && list.isConnected) {
 					list.innerHTML =

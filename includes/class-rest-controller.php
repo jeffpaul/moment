@@ -91,6 +91,12 @@ class Moment_REST_Controller extends WP_REST_Controller {
 							'default'           => 1,
 							'sanitize_callback' => 'absint',
 						),
+						'status'   => array(
+							'type'              => 'string',
+							'default'           => 'any',
+							'enum'              => array( 'any', 'publish', 'draft' ),
+							'sanitize_callback' => 'sanitize_key',
+						),
 					),
 				),
 			)
@@ -308,10 +314,17 @@ class Moment_REST_Controller extends WP_REST_Controller {
 		$per_page = min( self::MAX_PER_PAGE, max( 1, absint( $request->get_param( 'per_page' ) ) ) );
 		$page     = max( 1, absint( $request->get_param( 'page' ) ) );
 
+		// Status filter, so drafts stay reachable in the app no matter how
+		// many Moments have published since (the Home Drafts row).
+		$status   = sanitize_key( (string) $request->get_param( 'status' ) );
+		$statuses = in_array( $status, array( 'publish', 'draft' ), true )
+			? array( $status )
+			: array( 'publish', 'draft' );
+
 		$query = new WP_Query(
 			array(
 				'post_type'      => 'post',
-				'post_status'    => array( 'publish', 'draft' ),
+				'post_status'    => $statuses,
 				'posts_per_page' => $per_page,
 				'paged'          => $page,
 				'orderby'        => 'date',

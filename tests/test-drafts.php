@@ -87,6 +87,26 @@ class Test_Drafts extends WP_UnitTestCase {
 		$this->assertSame( 'draft', $response->get_data()['status'] );
 	}
 
+	/** GET /moments?status= filters the list (drafts stay reachable). */
+	public function test_moments_list_status_filter() {
+		$draft_id = $this->save_draft_with_target();
+
+		$publisher    = new Moment_Publisher();
+		$published_id = (int) $publisher->publish( array( 'caption' => 'Live one' ) );
+
+		$fetch = function ( string $status ) {
+			$request = new WP_REST_Request( 'GET', '/moment/v1/moments' );
+			$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+			$request->set_param( 'status', $status );
+
+			return array_column( rest_do_request( $request )->get_data(), 'id' );
+		};
+
+		$this->assertSame( array( $draft_id ), array_values( array_intersect( $fetch( 'draft' ), array( $draft_id, $published_id ) ) ) );
+		$this->assertSame( array( $published_id ), array_values( array_intersect( $fetch( 'publish' ), array( $draft_id, $published_id ) ) ) );
+		$this->assertCount( 2, array_intersect( $fetch( 'any' ), array( $draft_id, $published_id ) ) );
+	}
+
 	/** GET /moments/{id} returns the editable payload, raw caption included. */
 	public function test_get_moment_returns_edit_payload() {
 		$publisher = new Moment_Publisher();
