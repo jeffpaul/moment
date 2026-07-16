@@ -245,6 +245,26 @@ h2[tabindex='-1']:focus {
 	border-top: 1px solid var(--moment-border);
 }
 
+/* --- Home footer: primary CTA in the thumb zone, above the site nav --- */
+.moment-homefooter {
+	position: sticky;
+	bottom: 0;
+	margin-top: auto;
+	background: var(--moment-bg);
+	border-top: 1px solid var(--moment-border);
+}
+
+.moment-homefooter__cta {
+	display: block;
+	width: calc(100% - 2 * var(--moment-spacing-md));
+	margin: var(--moment-spacing-md) var(--moment-spacing-md) 0;
+}
+
+.moment-homefooter .moment-bottomnav {
+	margin-top: 0;
+	border-top: 0;
+}
+
 /* --- Chips and badges --- */
 .moment-chip {
 	display: inline-flex;

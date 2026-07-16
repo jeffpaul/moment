@@ -282,7 +282,6 @@
 				</a>
 			</header>
 			<section class="moment-screen">
-				<button type="button" class="moment-btn moment-btn--primary moment-btn--hero" data-action="new-moment">+ New Moment</button>
 				<section class="moment-recent" aria-labelledby="moment-recent-heading">
 					<h2 id="moment-recent-heading" class="moment-section-heading">Recent Moments</h2>
 					<div class="moment-recent__list" data-recent-list aria-live="polite">
@@ -291,13 +290,16 @@
 					</div>
 				</section>
 			</section>
-			<nav class="moment-bottomnav" aria-label="Site views">
-				<a class="moment-bottomnav__link" href="${esc(siteLink('timeline/'))}">Timeline</a>
-				<a class="moment-bottomnav__link" href="${esc(siteLink('images/'))}">Images</a>
-				<a class="moment-bottomnav__link" href="${esc(siteLink('videos/'))}">Videos</a>
-				<a class="moment-bottomnav__link" href="${esc(siteLink('audio/'))}">Audio</a>
-				<a class="moment-bottomnav__link" href="${esc(siteLink('notes/'))}">Notes</a>
-			</nav>`;
+			<footer class="moment-homefooter">
+				<button type="button" class="moment-btn moment-btn--primary moment-btn--hero moment-homefooter__cta" data-action="new-moment">+ New Moment</button>
+				<nav class="moment-bottomnav" aria-label="Site views">
+					<a class="moment-bottomnav__link" href="${esc(siteLink('timeline/'))}">Timeline</a>
+					<a class="moment-bottomnav__link" href="${esc(siteLink('images/'))}">Images</a>
+					<a class="moment-bottomnav__link" href="${esc(siteLink('videos/'))}">Videos</a>
+					<a class="moment-bottomnav__link" href="${esc(siteLink('audio/'))}">Audio</a>
+					<a class="moment-bottomnav__link" href="${esc(siteLink('notes/'))}">Notes</a>
+				</nav>
+			</footer>`;
 		},
 
 		bindEvents() {
