@@ -167,3 +167,129 @@ test('notifications show imported social replies with source labels', async ({ p
 	await expect(page.getByText('Reply from Bluesky').first()).toBeVisible();
 	await expect(page.getByText('Love this one!').first()).toBeVisible();
 });
+
+// --- Coverage for changes since 0.1.1 ---
+
+// The primary CTA moved into the thumb zone: bottom of the viewport,
+// above the site-views nav.
+test('home CTA sits in the thumb zone', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/moment');
+	const button = page.locator('[data-action="new-moment"]');
+	await expect(button).toBeVisible();
+	const box = await button.boundingBox();
+	const viewport = page.viewportSize();
+	expect(box.y).toBeGreaterThan(viewport.height * 0.6);
+});
+
+// Plugins list table offers a one-click path into the app.
+test('plugins page offers an Open Moment action link', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/wp-admin/plugins.php');
+	const link = page
+		.locator('tr[data-slug="moment"]')
+		.locator('a', { hasText: 'Open Moment' })
+		.first();
+	await expect(link).toBeVisible();
+	expect(await link.getAttribute('href')).toContain('/moment');
+});
+
+// The PWA manifest serves directly (no canonical 301) with the app scope.
+test('manifest serves directly with app start_url', async ({ request }) => {
+	const res = await request.get('/moment/manifest.json', { maxRedirects: 0 });
+	expect(res.status()).toBe(200);
+	expect(res.headers()['content-type']).toContain('manifest+json');
+	const manifest = await res.json();
+	expect(manifest.start_url).toContain('/moment');
+	expect(manifest.scope).toContain('/moment');
+});
+
+// Save as Draft → Drafts row → resume editing → publish (running the
+// stored destinations via deferred syndication).
+test('draft lifecycle: save, resume from Drafts row, publish', async ({ page }) => {
+	const caption = `E2E draft ${RUN_ID}`;
+	const finished = `${caption} finished`;
+
+	await loginAs(page);
+	await page.goto('/moment');
+	await page.locator('[data-action="new-moment"]').click();
+	await page.fill('#moment-caption', caption);
+	await page.locator('[data-action="next"]').click();
+	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
+	await page.locator('[data-action="save-draft"]').click();
+	await expect(page.getByText('Saved as draft')).toBeVisible();
+
+	// Not publicly visible while a draft.
+	await page.goto('/timeline/');
+	await expect(page.getByText(caption)).toHaveCount(0);
+
+	// Home shows the Drafts row; the row is chip-marked.
+	await page.goto('/moment');
+	await expect(page.getByRole('heading', { name: 'Drafts' })).toBeVisible();
+	const row = page.locator('[data-edit-draft]').filter({ hasText: caption }).first();
+	await expect(row).toBeVisible();
+	await expect(row.getByText('Draft')).toBeVisible();
+
+	// Resume: composer reopens prefilled, destinations remembered.
+	await row.click();
+	await expect(page.getByText('Edit Draft')).toBeVisible();
+	await expect(page.locator('#moment-caption')).toHaveValue(caption);
+	await page.fill('#moment-caption', finished);
+	await page.locator('[data-action="next"]').click();
+	await expect(page.locator('[data-connector="bluesky"]')).toBeChecked();
+	await page.locator('[data-action="publish"]').click();
+	await expect(page.getByText('Published to your site')).toBeVisible();
+	await expect(page.getByText('Bluesky')).toBeVisible();
+
+	// Draft row entry is gone; the published Moment is public.
+	await page.goto('/moment');
+	await expect(page.locator('[data-edit-draft]').filter({ hasText: caption })).toHaveCount(0);
+	await page.goto('/timeline/');
+	await expect(page.getByText(finished)).toBeVisible();
+});
+
+// Unread indicator: set by newly imported replies, cleared by viewing
+// notifications — client-side and across a full reload.
+test('unread dot appears for new replies and clears after viewing', async ({ page }) => {
+	const caption = `E2E unread ${RUN_ID}`;
+
+	await loginAs(page);
+	await page.goto('/moment');
+	await page.locator('[data-action="new-moment"]').click();
+	await page.fill('#moment-caption', caption);
+	await page.locator('[data-action="next"]').click();
+	await page.locator('[data-action="publish"]').click();
+	await expect(page.getByText('Published to your site')).toBeVisible();
+
+	// Import replies through the sync endpoint (same as the hourly cron).
+	await page.evaluate(async () => {
+		const config = window.momentApp;
+		const listRes = await fetch(`${config.restUrl}moments?per_page=1`, {
+			headers: { 'X-WP-Nonce': config.nonce },
+			credentials: 'same-origin',
+		});
+		const [latest] = await listRes.json();
+		await fetch(`${config.restUrl}moments/${latest.id}/sync-responses`, {
+			method: 'POST',
+			headers: { 'X-WP-Nonce': config.nonce, 'Content-Type': 'application/json' },
+			credentials: 'same-origin',
+			body: JSON.stringify({ networks: ['bluesky'] }),
+		});
+	});
+
+	// Fresh load: the bell carries the unread dot.
+	await page.goto('/moment');
+	await expect(page.locator('.moment-iconbtn__dot')).toBeVisible();
+
+	// Viewing notifications clears it without a reload…
+	await page.locator('.moment-iconbtn').click();
+	await expect(page.getByText('Reply from Bluesky').first()).toBeVisible();
+	await page.locator('.moment-backlink').click();
+	await expect(page.locator('[data-action="new-moment"]')).toBeVisible();
+	await expect(page.locator('.moment-iconbtn__dot')).toHaveCount(0);
+
+	// …and stays cleared across a full reload (server-side read state).
+	await page.goto('/moment');
+	await expect(page.locator('[data-action="new-moment"]')).toBeVisible();
+	await expect(page.locator('.moment-iconbtn__dot')).toHaveCount(0);
+});
