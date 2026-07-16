@@ -361,11 +361,17 @@
 				: `<span class="moment-recent__thumb moment-recent__thumb--glyph" aria-hidden="true">${esc(
 						(TYPE_LABELS[item.type] || 'M').charAt(0)
 				  )}</span>`;
+			// Drafts look identical to published Moments otherwise — and
+			// their permalinks are invisible to visitors — so say so.
+			const draftChip =
+				item.status && 'publish' !== item.status
+					? ' <span class="moment-chip moment-chip--draft">Draft</span>'
+					: '';
 			return `
 			<a class="moment-recent__item" href="${esc(item.permalink || '#home')}">
 				${thumb}
 				<span class="moment-recent__body">
-					<span class="moment-recent__title">${esc(title)}</span>
+					<span class="moment-recent__title">${esc(title)}${draftChip}</span>
 					<span class="moment-recent__meta">${esc(TYPE_LABELS[item.type] || item.type || '')}${
 						item.date ? ' · ' + esc(relativeTime(item.date)) : ''
 					}</span>

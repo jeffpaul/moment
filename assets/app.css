@@ -280,6 +280,14 @@ h2[tabindex='-1']:focus {
 	white-space: nowrap;
 }
 
+/* Neutral (non-brand) chip marking unpublished items in private views. */
+.moment-chip--draft {
+	background: var(--moment-bg-subtle, #f4f4f5);
+	border-color: var(--moment-border);
+	color: var(--moment-text-secondary);
+	vertical-align: middle;
+}
+
 .moment-chip--muted {
 	font-style: italic;
 	color: var(--moment-text-muted);
