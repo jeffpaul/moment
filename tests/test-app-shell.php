@@ -12,6 +12,10 @@
 class Test_App_Shell extends WP_UnitTestCase {
 
 	private function render_shell(): string {
+		// Fresh script/style registries: WP_Scripts marks handles as done
+		// after printing, which would blank a second render in-process.
+		unset( $GLOBALS['wp_scripts'], $GLOBALS['wp_styles'] );
+
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		wp_set_current_user( $user_id );
 
@@ -39,6 +43,21 @@ class Test_App_Shell extends WP_UnitTestCase {
 			strpos( $html, 'assets/app.js' ),
 			strpos( $html, 'window.momentApp' ),
 			'Inline config must come before the app script tag'
+		);
+	}
+
+	/** The bootstrap config carries real section-page URLs. */
+	public function test_config_carries_section_page_urls() {
+		Moment_Plugin::activate();
+
+		$html = $this->render_shell();
+
+		$timeline_id = Moment_Plugin::get_moment_pages()['timeline'];
+		$this->assertStringContainsString( '"pages":', $html );
+		$this->assertStringContainsString(
+			str_replace( '/', '\/', (string) get_permalink( $timeline_id ) ),
+			$html,
+			'Config must carry the timeline page permalink'
 		);
 	}
 

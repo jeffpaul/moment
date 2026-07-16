@@ -237,24 +237,104 @@ final class Moment_Plugin {
 	 * @return void
 	 */
 	private static function create_pages(): void {
-		foreach ( self::ACTIVATION_PAGES as $slug => $block ) {
-			$existing = get_page_by_path( $slug, OBJECT, 'page' );
+		$map = array();
 
-			if ( $existing instanceof WP_Post ) {
+		foreach ( self::ACTIVATION_PAGES as $slug => $block ) {
+			$page_id = self::find_view_page( $slug, $block );
+
+			if ( ! $page_id ) {
+				// Preferred slug first; if the site already has an
+				// unrelated page there, fall back to a moment- prefix.
+				// Existing content is never overwritten.
+				foreach ( array( $slug, 'moment-' . $slug ) as $path ) {
+					if ( get_page_by_path( $path, OBJECT, 'page' ) instanceof WP_Post ) {
+						continue;
+					}
+
+					// Dynamic block markup, not a shortcode: block themes
+					// edit it natively, and both surfaces share
+					// Moment_Renderer anyway.
+					$page_id = (int) wp_insert_post(
+						array(
+							'post_type'    => 'page',
+							'post_status'  => 'publish',
+							'post_name'    => $path,
+							'post_title'   => ucfirst( $slug ),
+							'post_content' => '<!-- wp:' . $block . ' /-->',
+						)
+					);
+					break;
+				}
+			}
+
+			// 0 = both candidate slugs are taken by non-Moment content;
+			// the app hides that view's link rather than mislink.
+			$map[ $slug ] = $page_id;
+		}
+
+		update_option( 'moment_pages', $map );
+	}
+
+	/**
+	 * Find an existing page that renders the given Moment view — one whose
+	 * content carries the view's block or shortcode — at either candidate
+	 * slug. Distinguishes our pages from unrelated user pages that merely
+	 * occupy the slug.
+	 *
+	 * @param string $slug  View slug (e.g. 'timeline').
+	 * @param string $block Block name (e.g. 'moment/timeline').
+	 * @return int Page ID, or 0 when no Moment view page exists.
+	 */
+	private static function find_view_page( string $slug, string $block ): int {
+		foreach ( array( $slug, 'moment-' . $slug ) as $path ) {
+			$page = get_page_by_path( $path, OBJECT, 'page' );
+
+			if ( ! $page instanceof WP_Post ) {
 				continue;
 			}
 
-			// Dynamic block markup, not a shortcode: block themes edit it
-			// natively, and both surfaces share Moment_Renderer anyway.
-			wp_insert_post(
-				array(
-					'post_type'    => 'page',
-					'post_status'  => 'publish',
-					'post_name'    => $slug,
-					'post_title'   => ucfirst( $slug ),
-					'post_content' => '<!-- wp:' . $block . ' /-->',
-				)
-			);
+			if (
+				str_contains( $page->post_content, '<!-- wp:' . $block )
+				|| str_contains( $page->post_content, '[moment_' . $slug )
+			) {
+				return (int) $page->ID;
+			}
 		}
+
+		return 0;
+	}
+
+	/**
+	 * Map of view slug => page ID for the Moment section pages.
+	 *
+	 * Self-heals for installs that predate the mapping (or whose pages
+	 * changed) by adopting pages that carry the view's block or shortcode.
+	 * A view maps to 0 when its slugs are occupied by non-Moment content —
+	 * consumers hide that view's link.
+	 *
+	 * @return array<string, int>
+	 */
+	public static function get_moment_pages(): array {
+		$map = get_option( 'moment_pages', array() );
+		$map = is_array( $map ) ? $map : array();
+
+		$dirty = false;
+
+		foreach ( self::ACTIVATION_PAGES as $slug => $block ) {
+			$page_id = isset( $map[ $slug ] ) ? absint( $map[ $slug ] ) : null;
+
+			if ( null !== $page_id && ( 0 === $page_id || 'publish' === get_post_status( $page_id ) ) ) {
+				continue;
+			}
+
+			$map[ $slug ] = self::find_view_page( $slug, $block );
+			$dirty        = true;
+		}
+
+		if ( $dirty ) {
+			update_option( 'moment_pages', $map );
+		}
+
+		return $map;
 	}
 }

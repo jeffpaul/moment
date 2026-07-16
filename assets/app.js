@@ -113,6 +113,20 @@
 		return (config.siteUrl || '/').replace(/\/$/, '') + '/' + path.replace(/^\//, '');
 	}
 
+	// Section-page URL for a view, or '' when the site has no Moment page
+	// for it (slug collision at activation) — callers hide the link.
+	function pageLink(view) {
+		return (config.pages && config.pages[view]) || '';
+	}
+
+	const PAGE_LABELS = {
+		timeline: 'Timeline',
+		images: 'Images',
+		videos: 'Videos',
+		audio: 'Audio',
+		notes: 'Notes',
+	};
+
 	/**
 	 * Detect the Moment type from selected files (client-side mirror of the
 	 * server-side detection used for routing defaults).
@@ -292,13 +306,20 @@
 			</section>
 			<footer class="moment-homefooter">
 				<button type="button" class="moment-btn moment-btn--primary moment-btn--hero moment-homefooter__cta" data-action="new-moment">+ New Moment</button>
-				<nav class="moment-bottomnav" aria-label="Site views">
-					<a class="moment-bottomnav__link" href="${esc(siteLink('timeline/'))}">Timeline</a>
-					<a class="moment-bottomnav__link" href="${esc(siteLink('images/'))}">Images</a>
-					<a class="moment-bottomnav__link" href="${esc(siteLink('videos/'))}">Videos</a>
-					<a class="moment-bottomnav__link" href="${esc(siteLink('audio/'))}">Audio</a>
-					<a class="moment-bottomnav__link" href="${esc(siteLink('notes/'))}">Notes</a>
-				</nav>
+				${(() => {
+					const links = Object.keys(PAGE_LABELS)
+						.filter((view) => pageLink(view))
+						.map(
+							(view) =>
+								`<a class="moment-bottomnav__link" href="${esc(pageLink(view))}">${
+									PAGE_LABELS[view]
+								}</a>`
+						)
+						.join('');
+					return links
+						? `<nav class="moment-bottomnav" aria-label="Site views">${links}</nav>`
+						: '';
+				})()}
 			</footer>`;
 		},
 
@@ -891,9 +912,13 @@
 			</section>
 			<footer class="moment-actionbar">
 				<button type="button" class="moment-btn moment-btn--primary" data-action="create-another">Create Another</button>
-				<p class="moment-status"><a class="moment-btn--text moment-btn" href="${esc(
-					siteLink('timeline/')
-				)}">View Timeline &rarr;</a></p>
+				${
+					pageLink('timeline')
+						? `<p class="moment-status"><a class="moment-btn--text moment-btn" href="${esc(
+								pageLink('timeline')
+						  )}">View Timeline &rarr;</a></p>`
+						: ''
+				}
 			</footer>`;
 		},
 

@@ -79,6 +79,15 @@ foreach ( $moment_all_types as $moment_type ) {
 
 $moment_ai = Moment_Plugin::instance()->ai_assist;
 
+// Section-page links resolve to the real pages (collision-aware slugs);
+// a view without a live Moment page gets '' and the app hides its link.
+$moment_pages = array();
+foreach ( Moment_Plugin::get_moment_pages() as $moment_view => $moment_page_id ) {
+	$moment_pages[ $moment_view ] = $moment_page_id && 'publish' === get_post_status( $moment_page_id )
+		? esc_url_raw( (string) get_permalink( $moment_page_id ) )
+		: '';
+}
+
 $moment_config = array(
 	'restUrl'     => esc_url_raw( rest_url( 'moment/v1/' ) ),
 	'assetsUrl'   => esc_url_raw( MOMENT_PLUGIN_URL . 'assets/' ),
@@ -87,6 +96,7 @@ $moment_config = array(
 	'screen'      => $moment_screen,
 	'connectors'  => $moment_connectors,
 	'defaults'    => $moment_type_defaults,
+	'pages'       => $moment_pages,
 	'ai'          => array(
 		'available'     => $moment_ai->is_available(),
 		'providerLabel' => $moment_ai->get_provider_label(),

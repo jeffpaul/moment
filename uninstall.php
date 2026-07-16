@@ -19,6 +19,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 delete_option( 'moment_activated' );
 delete_option( 'moment_version' );
+delete_option( 'moment_pages' );
 
 // Per-user destination routing preferences, across all users.
 delete_metadata( 'user', 0, 'moment_destination_prefs', '', true );
