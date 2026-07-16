@@ -52,6 +52,11 @@ test('authenticated user sees Moment Home without wp-admin chrome', async ({ pag
 	await expect(page.locator('[data-action="new-moment"]')).toBeVisible();
 	await expect(page.locator('#wpadminbar')).toHaveCount(0);
 	await expect(page.locator('#adminmenu')).toHaveCount(0);
+
+	// A fresh user has no drafts: the Drafts section must not render
+	// (regression: author display rules once overrode [hidden]).
+	await expect(page.locator('[data-recent-list] .moment-recent__item, [data-recent-list] .moment-empty').first()).toBeVisible();
+	await expect(page.locator('[data-drafts-section]')).toBeHidden();
 });
 
 // Scenarios 3 + 4: note Moment with the connected network (Bluesky)

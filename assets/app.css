@@ -331,6 +331,12 @@ h2[tabindex='-1']:focus {
 	gap: var(--moment-spacing-sm);
 }
 
+/* Author display rules above beat the UA's [hidden] styling — restore
+ * it, so e.g. the empty Drafts section actually disappears. */
+[hidden] {
+	display: none !important;
+}
+
 .moment-recent__list {
 	display: flex;
 	flex-direction: column;
