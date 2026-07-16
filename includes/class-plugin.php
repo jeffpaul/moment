@@ -97,11 +97,11 @@ final class Moment_Plugin {
 	 * @var array<string, string>
 	 */
 	private const ACTIVATION_PAGES = array(
-		'timeline' => 'moment_timeline',
-		'images'   => 'moment_images',
-		'videos'   => 'moment_videos',
-		'audio'    => 'moment_audio',
-		'notes'    => 'moment_notes',
+		'timeline' => 'moment/timeline',
+		'images'   => 'moment/images',
+		'videos'   => 'moment/videos',
+		'audio'    => 'moment/audio',
+		'notes'    => 'moment/notes',
 	);
 
 	/**
@@ -237,20 +237,22 @@ final class Moment_Plugin {
 	 * @return void
 	 */
 	private static function create_pages(): void {
-		foreach ( self::ACTIVATION_PAGES as $slug => $shortcode ) {
+		foreach ( self::ACTIVATION_PAGES as $slug => $block ) {
 			$existing = get_page_by_path( $slug, OBJECT, 'page' );
 
 			if ( $existing instanceof WP_Post ) {
 				continue;
 			}
 
+			// Dynamic block markup, not a shortcode: block themes edit it
+			// natively, and both surfaces share Moment_Renderer anyway.
 			wp_insert_post(
 				array(
 					'post_type'    => 'page',
 					'post_status'  => 'publish',
 					'post_name'    => $slug,
 					'post_title'   => ucfirst( $slug ),
-					'post_content' => '<!-- wp:shortcode -->[' . $shortcode . ']<!-- /wp:shortcode -->',
+					'post_content' => '<!-- wp:' . $block . ' /-->',
 				)
 			);
 		}
