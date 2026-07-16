@@ -58,6 +58,12 @@ class Moment_REST_Controller extends WP_REST_Controller {
 							'type'              => 'string',
 							'sanitize_callback' => 'sanitize_key',
 						),
+						'status'               => array(
+							'type'              => 'string',
+							'default'           => 'publish',
+							'enum'              => array( 'publish', 'draft' ),
+							'sanitize_callback' => 'sanitize_key',
+						),
 						'syndication_targets'  => array(
 							'description' => __( 'Selected connector IDs (array or JSON string).', 'moment' ),
 						),
@@ -232,6 +238,7 @@ class Moment_REST_Controller extends WP_REST_Controller {
 			'caption'              => wp_kses_post( (string) $request->get_param( 'caption' ) ),
 			'title'                => sanitize_text_field( (string) $request->get_param( 'title' ) ),
 			'primary_type'         => sanitize_key( (string) $request->get_param( 'primary_type' ) ),
+			'status'               => sanitize_key( (string) $request->get_param( 'status' ) ),
 			'syndication_targets'  => $targets,
 			'default_destinations' => $request->get_param( 'default_destinations' ),
 			'ai_assist_used'       => rest_sanitize_boolean( $request->get_param( 'ai_assist_used' ) ),

@@ -182,6 +182,7 @@ final class Moment_Plugin {
 		$this->blocks->register();
 		$this->syndication_links->register();
 		$this->backflow_sync->register();
+		$this->publisher->register();
 
 		/**
 		 * Fires after built-in Moment connectors are registered.

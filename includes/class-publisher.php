@@ -134,9 +134,13 @@ class Moment_Publisher {
 			$title = $this->generate_title( $caption );
 		}
 
+		// An explicitly requested draft always wins; a requested (or
+		// implied) publish still requires the capability.
+		$wants_draft = isset( $data['status'] ) && 'draft' === $data['status'];
+
 		$post_data = array(
 			'post_type'    => 'post', // NEVER a custom post type — the Moment is a standard post.
-			'post_status'  => current_user_can( 'publish_posts' ) ? 'publish' : 'draft',
+			'post_status'  => ( ! $wants_draft && current_user_can( 'publish_posts' ) ) ? 'publish' : 'draft',
 			'post_author'  => get_current_user_id(),
 			'post_title'   => $title,
 			'post_content' => $this->build_block_markup( $media_ids, $caption ),
@@ -209,9 +213,71 @@ class Moment_Publisher {
 		 */
 		do_action( 'moment_published', $post_id, $moment_data );
 
-		$this->maybe_syndicate( $post_id, $targets, $moment_data );
+		// Drafts never syndicate. Targets stay stored in post meta with
+		// status 'not_attempted'; syndicate_on_publish() runs them when
+		// the Moment goes live — from the app or wp-admin alike.
+		if ( 'publish' === get_post_status( $post_id ) ) {
+			$this->maybe_syndicate( $post_id, $targets, $moment_data );
+		}
 
 		return $post_id;
+	}
+
+	/**
+	 * Register the deferred-syndication hook. Called on init.
+	 *
+	 * @return void
+	 */
+	public function register(): void {
+		add_action( 'transition_post_status', array( $this, 'syndicate_on_publish' ), 10, 3 );
+	}
+
+	/**
+	 * Run stored, never-attempted syndication targets when a Moment draft
+	 * becomes published — regardless of where the publish happened.
+	 *
+	 * Safe against the inline create path (Moment meta does not exist yet
+	 * when wp_insert_post fires this transition) and against repeats (the
+	 * syndication status leaves 'not_attempted' after the first run).
+	 *
+	 * @param string  $new_status New post status.
+	 * @param string  $old_status Old post status.
+	 * @param WP_Post $post       The post.
+	 * @return void
+	 */
+	public function syndicate_on_publish( $new_status, $old_status, $post ): void {
+		if ( 'publish' !== $new_status || 'publish' === $old_status || ! $post instanceof WP_Post ) {
+			return;
+		}
+
+		if ( '1' !== get_post_meta( $post->ID, '_moment_is_moment', true ) ) {
+			return;
+		}
+
+		if ( 'not_attempted' !== get_post_meta( $post->ID, '_moment_syndication_status', true ) ) {
+			return;
+		}
+
+		$targets = json_decode( (string) get_post_meta( $post->ID, '_moment_syndication_targets', true ), true );
+		$targets = is_array( $targets ) ? array_values( array_filter( array_map( 'sanitize_key', $targets ) ) ) : array();
+
+		if ( empty( $targets ) ) {
+			return;
+		}
+
+		$media_ids = json_decode( (string) get_post_meta( $post->ID, '_moment_media_ids', true ), true );
+
+		$moment_data = array(
+			'post_id'             => (int) $post->ID,
+			'primary_type'        => (string) get_post_meta( $post->ID, '_moment_primary_type', true ),
+			'media_ids'           => is_array( $media_ids ) ? array_map( 'intval', $media_ids ) : array(),
+			'caption'             => '' !== $post->post_excerpt ? $post->post_excerpt : $post->post_title,
+			'syndication_targets' => $targets,
+			'post_status'         => 'publish',
+			'created_from'        => (string) get_post_meta( $post->ID, '_moment_created_from', true ),
+		);
+
+		$this->maybe_syndicate( (int) $post->ID, $targets, $moment_data );
 	}
 
 	/**

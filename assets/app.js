@@ -819,6 +819,7 @@
 			<footer class="moment-actionbar">
 				<p class="moment-status" data-publish-status aria-live="polite"></p>
 				<button type="button" class="moment-btn moment-btn--primary" data-action="publish">Publish Now</button>
+				<button type="button" class="moment-btn moment-btn--secondary" data-action="save-draft">Save as Draft</button>
 			</footer>`;
 		},
 
@@ -838,19 +839,32 @@
 
 			root
 				.querySelector('[data-action="publish"]')
-				.addEventListener('click', () => this.publish());
+				.addEventListener('click', () => this.publish('publish'));
+			root
+				.querySelector('[data-action="save-draft"]')
+				.addEventListener('click', () => this.publish('draft'));
 		},
 
-		async publish() {
-			const button = root.querySelector('[data-action="publish"]');
+		async publish(postStatus) {
+			const isDraft = 'draft' === postStatus;
+			const button = root.querySelector(
+				isDraft ? '[data-action="save-draft"]' : '[data-action="publish"]'
+			);
+			const otherButton = root.querySelector(
+				isDraft ? '[data-action="publish"]' : '[data-action="save-draft"]'
+			);
 			const status = root.querySelector('[data-publish-status]');
 			button.disabled = true;
-			button.textContent = 'Publishing…';
-			status.textContent = 'Publishing your Moment…';
+			if (otherButton) {
+				otherButton.disabled = true;
+			}
+			button.textContent = isDraft ? 'Saving…' : 'Publishing…';
+			status.textContent = isDraft ? 'Saving your draft…' : 'Publishing your Moment…';
 
 			const formData = new FormData();
 			formData.append('caption', state.caption);
 			formData.append('primary_type', state.primaryType);
+			formData.append('status', postStatus);
 			formData.append('ai_assist_used', state.aiAssistUsed ? '1' : '0');
 			state.targets.forEach((target) => formData.append('targets[]', target));
 			state.files.forEach((entry) => formData.append('files[]', entry.file, entry.file.name));
@@ -870,8 +884,11 @@
 				navigate('#success');
 			} catch (err) {
 				button.disabled = false;
-				button.textContent = 'Publish Now';
-				status.textContent = 'Publish failed: ' + err.message;
+				if (otherButton) {
+					otherButton.disabled = false;
+				}
+				button.textContent = isDraft ? 'Save as Draft' : 'Publish Now';
+				status.textContent = (isDraft ? 'Save failed: ' : 'Publish failed: ') + err.message;
 			}
 		},
 	};
@@ -894,24 +911,39 @@
 				})
 				.join('');
 
+			const isDraft = publish.response && 'publish' !== publish.response.status;
+
 			return `
 			<header class="moment-topbar">
-				<h1 class="moment-topbar__title moment-visually-hidden" tabindex="-1" data-moment-focus>Published</h1>
+				<h1 class="moment-topbar__title moment-visually-hidden" tabindex="-1" data-moment-focus>${
+					isDraft ? 'Draft saved' : 'Published'
+				}</h1>
 			</header>
 			<section class="moment-screen moment-success">
 				<span class="moment-success__icon">
 					<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
 				</span>
-				<h2 class="moment-screen__heading">Published to your site</h2>
+				<h2 class="moment-screen__heading">${
+					isDraft ? 'Saved as draft' : 'Published to your site'
+				}</h2>
 				${
-					permalink
+					isDraft
+						? '<p class="moment-note-card__meta">Finish it any time from Recent Moments on Home.</p>'
+						: ''
+				}
+				${
+					!isDraft && permalink
 						? `<a class="moment-success__link" href="${esc(
 								permalink
 						  )}" target="_blank" rel="noopener">View on Site &rarr;</a>`
 						: ''
 				}
 				${
-					rows
+					isDraft
+						? publish.targets.length
+							? '<p class="moment-note-card__meta">Selected destinations will publish when this Moment goes live.</p>'
+							: ''
+						: rows
 						? `<ul class="moment-syndication" aria-label="Syndication status">${rows}</ul>`
 						: '<p class="moment-note-card__meta">No social destinations selected.</p>'
 				}
