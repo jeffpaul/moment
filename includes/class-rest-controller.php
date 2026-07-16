@@ -418,7 +418,14 @@ class Moment_REST_Controller extends WP_REST_Controller {
 
 		unset( $request ); // No query args yet; Moment-only scope is enforced server-side.
 
-		return rest_ensure_response( Moment_Plugin::instance()->notifications->get_notifications() );
+		$notifications = Moment_Plugin::instance()->notifications;
+		$items         = $notifications->get_notifications();
+
+		// This endpoint backs the notifications screen, so serving it IS
+		// the user seeing their notifications — clear the unread flag.
+		$notifications->mark_seen();
+
+		return rest_ensure_response( $items );
 	}
 
 	/**

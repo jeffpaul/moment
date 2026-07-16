@@ -89,19 +89,22 @@ foreach ( Moment_Plugin::get_moment_pages() as $moment_view => $moment_page_id )
 }
 
 $moment_config = array(
-	'restUrl'     => esc_url_raw( rest_url( 'moment/v1/' ) ),
-	'assetsUrl'   => esc_url_raw( MOMENT_PLUGIN_URL . 'assets/' ),
-	'nonce'       => wp_create_nonce( 'wp_rest' ),
-	'siteUrl'     => esc_url_raw( home_url( '/' ) ),
-	'screen'      => $moment_screen,
-	'connectors'  => $moment_connectors,
-	'defaults'    => $moment_type_defaults,
-	'pages'       => $moment_pages,
-	'ai'          => array(
+	'restUrl'       => esc_url_raw( rest_url( 'moment/v1/' ) ),
+	'assetsUrl'     => esc_url_raw( MOMENT_PLUGIN_URL . 'assets/' ),
+	'nonce'         => wp_create_nonce( 'wp_rest' ),
+	'siteUrl'       => esc_url_raw( home_url( '/' ) ),
+	'screen'        => $moment_screen,
+	'connectors'    => $moment_connectors,
+	'defaults'      => $moment_type_defaults,
+	'pages'         => $moment_pages,
+	'ai'            => array(
 		'available'     => $moment_ai->is_available(),
 		'providerLabel' => $moment_ai->get_provider_label(),
 	),
-	'currentUser' => array(
+	'notifications' => array(
+		'hasUnread' => Moment_Plugin::instance()->notifications->has_unread(),
+	),
+	'currentUser'   => array(
 		'id'          => (int) $moment_user->ID,
 		'displayName' => $moment_user->display_name,
 	),

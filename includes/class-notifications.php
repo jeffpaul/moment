@@ -118,14 +118,7 @@ class Moment_Notifications {
 	 * @return array<int, array<string, mixed>> Notification items, newest first.
 	 */
 	public function get_notifications( int $limit = self::DEFAULT_LIMIT ): array {
-		$moment_post_ids = array_values(
-			array_filter(
-				$this->get_moment_post_ids(),
-				static function ( $post_id ) {
-					return current_user_can( 'edit_post', $post_id );
-				}
-			)
-		);
+		$moment_post_ids = $this->scoped_moment_post_ids();
 
 		if ( empty( $moment_post_ids ) ) {
 			return array();
@@ -145,6 +138,70 @@ class Moment_Notifications {
 		}
 
 		return $items;
+	}
+
+	/**
+	 * User meta key holding the last-seen notifications timestamp.
+	 */
+	public const SEEN_META = 'moment_notifications_seen';
+
+	/**
+	 * Whether the current user has notifications newer than their last
+	 * visit to the notifications screen. Boolean only — no counts.
+	 *
+	 * @return bool
+	 */
+	public function has_unread(): bool {
+		$user_id = get_current_user_id();
+
+		if ( ! $user_id ) {
+			return false;
+		}
+
+		$moment_post_ids = $this->scoped_moment_post_ids();
+
+		if ( empty( $moment_post_ids ) ) {
+			return false;
+		}
+
+		$comments = $this->get_comments_for_posts( $moment_post_ids, 1 );
+
+		if ( empty( $comments ) ) {
+			return false;
+		}
+
+		$seen = (int) get_user_meta( $user_id, self::SEEN_META, true );
+
+		return strtotime( $comments[0]->comment_date_gmt . ' UTC' ) > $seen;
+	}
+
+	/**
+	 * Record that the current user has seen their notifications.
+	 *
+	 * @return void
+	 */
+	public function mark_seen(): void {
+		$user_id = get_current_user_id();
+
+		if ( $user_id ) {
+			update_user_meta( $user_id, self::SEEN_META, time() );
+		}
+	}
+
+	/**
+	 * Moment post IDs the current user may see activity for.
+	 *
+	 * @return int[]
+	 */
+	private function scoped_moment_post_ids(): array {
+		return array_values(
+			array_filter(
+				$this->get_moment_post_ids(),
+				static function ( $post_id ) {
+					return current_user_can( 'edit_post', $post_id );
+				}
+			)
+		);
 	}
 
 	/**

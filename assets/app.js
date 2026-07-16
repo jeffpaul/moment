@@ -321,8 +321,17 @@
 			return `
 			<header class="moment-topbar">
 				<h1 class="moment-topbar__title" tabindex="-1" data-moment-focus>Moment</h1>
-				<a class="moment-iconbtn" href="#notifications" aria-label="Notifications">
+				<a class="moment-iconbtn" href="#notifications" aria-label="${
+					config.notifications && config.notifications.hasUnread
+						? 'Notifications — unread replies'
+						: 'Notifications'
+				}">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+					${
+						config.notifications && config.notifications.hasUnread
+							? '<span class="moment-iconbtn__dot" aria-hidden="true"></span>'
+							: ''
+					}
 				</a>
 			</header>
 			<section class="moment-screen">
@@ -1084,6 +1093,11 @@
 			const list = root.querySelector('[data-notification-list]');
 			try {
 				const items = await apiGet('notifications');
+				// The endpoint marks everything seen server-side; mirror
+				// that so the Home bell dot clears without a reload.
+				if (config.notifications) {
+					config.notifications.hasUnread = false;
+				}
 				if (!list || !list.isConnected) {
 					return;
 				}

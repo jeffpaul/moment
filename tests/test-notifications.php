@@ -59,6 +59,42 @@ class Test_Notifications extends WP_UnitTestCase {
 		$this->assertSame( 0, $second['imported_count'] );
 	}
 
+	/** Unread flag lifecycle: set by new replies, cleared by viewing. */
+	public function test_unread_state_lifecycle() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $owner_id );
+
+		$notifications = new Moment_Notifications();
+		$this->assertFalse( $notifications->has_unread(), 'No Moments, no unread' );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => $owner_id ) );
+		update_post_meta( $post_id, '_moment_is_moment', '1' );
+		update_post_meta( $post_id, '_moment_primary_type', 'note' );
+		self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		$this->assertTrue( $notifications->has_unread(), 'A new reply means unread' );
+
+		// Viewing the notifications endpoint clears the flag server-side.
+		$request = new WP_REST_Request( 'GET', '/moment/v1/notifications' );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+		rest_do_request( $request );
+
+		$this->assertFalse( $notifications->has_unread(), 'Viewing marks everything seen' );
+
+		// A newer reply flips it back.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_date_gmt' => gmdate( 'Y-m-d H:i:s', time() + 5 ),
+			)
+		);
+		$this->assertTrue( $notifications->has_unread(), 'A newer reply is unread again' );
+
+		// Scoping: another author has no unread from this post.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		$this->assertFalse( $notifications->has_unread(), "Other authors don't inherit unread state" );
+	}
+
 	/** Sync against a non-Moment post is a 404. */
 	public function test_sync_non_moment_post_is_404() {
 		$normal_post   = self::factory()->post->create( array( 'post_type' => 'post' ) );

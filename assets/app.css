@@ -280,6 +280,22 @@ h2[tabindex='-1']:focus {
 	white-space: nowrap;
 }
 
+/* Unread indicator on the notifications bell — presence only, no count. */
+.moment-iconbtn {
+	position: relative;
+}
+
+.moment-iconbtn__dot {
+	position: absolute;
+	top: 9px;
+	right: 9px;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var(--moment-accent);
+	border: 2px solid var(--moment-bg);
+}
+
 /* Editing-a-draft banner at the top of the composer. */
 .moment-editbanner {
 	display: flex;

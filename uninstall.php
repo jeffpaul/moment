@@ -22,8 +22,10 @@ delete_option( 'moment_version' );
 delete_option( 'moment_pages' );
 delete_option( 'moment_app_base' );
 
-// Per-user destination routing preferences, across all users.
+// Per-user destination routing preferences and notification read-state,
+// across all users.
 delete_metadata( 'user', 0, 'moment_destination_prefs', '', true );
+delete_metadata( 'user', 0, 'moment_notifications_seen', '', true );
 
 // Scheduled backflow sync events (recurring + pending one-off freshen).
 wp_clear_scheduled_hook( 'moment_backflow_sync' );
