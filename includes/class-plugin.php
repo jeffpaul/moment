@@ -156,7 +156,7 @@ final class Moment_Plugin {
 	public function add_action_links( array $links ): array {
 		$open = sprintf(
 			'<a href="%s">%s</a>',
-			esc_url( home_url( '/moment' ) ),
+			esc_url( Moment_Routes::app_url() ),
 			esc_html__( 'Open Moment', 'moment' )
 		);
 
@@ -206,7 +206,9 @@ final class Moment_Plugin {
 	 */
 	public static function activate(): void {
 		Moment_Backflow_Sync::schedule();
-		// Register rewrite rules so the flush below picks them up.
+		// Resolve the app base fresh (respecting content at /moment), then
+		// register rewrite rules so the flush below picks them up.
+		Moment_Routes::resolve_app_base();
 		$routes = new Moment_Routes();
 		$routes->register();
 

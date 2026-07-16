@@ -20,8 +20,8 @@ $moment_screen = ( is_string( $moment_screen ) && '' !== $moment_screen ) ? $mom
 
 if ( ! is_user_logged_in() ) {
 	$moment_return_url = 'notifications' === $moment_screen
-		? home_url( '/moment/notifications' )
-		: home_url( '/moment' );
+		? Moment_Routes::app_url( 'notifications' )
+		: Moment_Routes::app_url();
 	wp_safe_redirect( wp_login_url( $moment_return_url ) );
 	exit;
 }
@@ -143,7 +143,8 @@ wp_enqueue_script( 'moment-app' );
 	<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 	<meta name="apple-mobile-web-app-title" content="Moment" />
 	<title><?php esc_html_e( 'Moment', 'moment' ); ?></title>
-	<link rel="manifest" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/manifest.json' ); ?>" />
+	<?php /* Dynamic manifest: start_url/scope track the resolved app base. */ ?>
+	<link rel="manifest" href="<?php echo esc_url( Moment_Routes::app_url( 'manifest.json' ) ); ?>" />
 	<?php /* iOS ignores SVG here; icon-192.png is generated from assets/icon.svg (see README). */ ?>
 	<link rel="apple-touch-icon" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/icon-192.png' ); ?>" />
 	<link rel="icon" href="<?php echo esc_url( MOMENT_PLUGIN_URL . 'assets/icon.svg' ); ?>" type="image/svg+xml" />
