@@ -143,6 +143,24 @@ final class Moment_Plugin {
 		add_action( 'plugins_loaded', array( $this, 'on_plugins_loaded' ) );
 		add_action( 'init', array( $this, 'on_init' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );
+		add_filter( 'plugin_action_links_' . plugin_basename( MOMENT_PLUGIN_FILE ), array( $this, 'add_action_links' ) );
+	}
+
+	/**
+	 * Add an "Open Moment" action link on the Plugins list table, so the
+	 * app is one click away right after activation.
+	 *
+	 * @param array<string, string> $links Existing action links (Deactivate, …).
+	 * @return array<string, string>
+	 */
+	public function add_action_links( array $links ): array {
+		$open = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( home_url( '/moment' ) ),
+			esc_html__( 'Open Moment', 'moment' )
+		);
+
+		return array_merge( array( 'open-moment' => $open ), $links );
 	}
 
 	/**
