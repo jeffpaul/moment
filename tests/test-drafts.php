@@ -87,6 +87,90 @@ class Test_Drafts extends WP_UnitTestCase {
 		$this->assertSame( 'draft', $response->get_data()['status'] );
 	}
 
+	/** GET /moments/{id} returns the editable payload, raw caption included. */
+	public function test_get_moment_returns_edit_payload() {
+		$publisher = new Moment_Publisher();
+		$post_id   = (int) $publisher->publish(
+			array(
+				'caption'             => "Line one.\n\nLine two's detail.",
+				'status'              => 'draft',
+				'syndication_targets' => array( 'bluesky' ),
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', "/moment/v1/moments/{$post_id}" );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+		$data = rest_do_request( $request )->get_data();
+
+		$this->assertSame( 'draft', $data['status'] );
+		$this->assertSame( "Line one.\n\nLine two's detail.", $data['caption'], 'Caption must round-trip losslessly' );
+		$this->assertSame( array( 'bluesky' ), $data['targets'] );
+		$this->assertSame( array(), $data['media'] );
+	}
+
+	/** Caption recovery for Moments predating the caption meta. */
+	public function test_get_moment_recovers_caption_from_content() {
+		$publisher = new Moment_Publisher();
+		$post_id   = (int) $publisher->publish(
+			array(
+				'caption' => 'Recoverable text',
+				'status'  => 'draft',
+			)
+		);
+		delete_post_meta( $post_id, '_moment_caption' );
+
+		$request = new WP_REST_Request( 'GET', "/moment/v1/moments/{$post_id}" );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+
+		$this->assertSame( 'Recoverable text', rest_do_request( $request )->get_data()['caption'] );
+	}
+
+	/** Updating a draft rewrites caption/content and can keep it a draft. */
+	public function test_update_draft_in_place() {
+		$post_id = $this->save_draft_with_target();
+
+		$request = new WP_REST_Request( 'POST', "/moment/v1/moments/{$post_id}" );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+		$request->set_param( 'caption', 'Finished thought.' );
+		$request->set_param( 'status', 'draft' );
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'draft', get_post_status( $post_id ) );
+		$this->assertSame( 'Finished thought.', get_post_meta( $post_id, '_moment_caption', true ) );
+		$this->assertStringContainsString( 'Finished thought.', get_post( $post_id )->post_content );
+		$this->assertSame( 'not_attempted', get_post_meta( $post_id, '_moment_syndication_status', true ) );
+	}
+
+	/** Publishing via the update endpoint runs the deferred syndication. */
+	public function test_update_to_publish_syndicates() {
+		$post_id = $this->save_draft_with_target();
+
+		$request = new WP_REST_Request( 'POST', "/moment/v1/moments/{$post_id}" );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+		$request->set_param( 'caption', 'Ready now.' );
+		$request->set_param( 'targets', array( 'bluesky' ) );
+		$request->set_param( 'status', 'publish' );
+		rest_do_request( $request );
+
+		$this->assertSame( 'publish', get_post_status( $post_id ) );
+		$external = json_decode( (string) get_post_meta( $post_id, '_moment_external_posts', true ), true );
+		$this->assertArrayHasKey( 'bluesky', (array) $external, 'Publishing an edited draft must run its targets' );
+	}
+
+	/** Another author cannot read or update someone else's draft. */
+	public function test_edit_endpoints_respect_per_post_capability() {
+		$post_id = $this->save_draft_with_target();
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		foreach ( array( 'GET', 'POST' ) as $method ) {
+			$request = new WP_REST_Request( $method, "/moment/v1/moments/{$post_id}" );
+			$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+			$this->assertSame( 403, rest_do_request( $request )->get_status(), "{$method} must be forbidden cross-author" );
+		}
+	}
+
 	/** Requesting publish without the capability still degrades to draft. */
 	public function test_publish_request_without_capability_stays_draft() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );

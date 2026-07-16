@@ -120,6 +120,46 @@ class Moment_REST_Controller extends WP_REST_Controller {
 
 		register_rest_route(
 			$this->namespace,
+			'/moments/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_moment' ),
+					'permission_callback' => array( $this, 'permissions_check_post' ),
+					'args'                => array(
+						'id' => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( $this, 'update_moment' ),
+					'permission_callback' => array( $this, 'permissions_check_post' ),
+					'args'                => array(
+						'id'      => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+						'caption' => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'wp_kses_post',
+						),
+						'status'  => array(
+							'type'              => 'string',
+							'enum'              => array( 'publish', 'draft' ),
+							'sanitize_callback' => 'sanitize_key',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
 			'/moments/(?P<id>\d+)/sync-responses',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -379,6 +419,119 @@ class Moment_REST_Controller extends WP_REST_Controller {
 		unset( $request ); // No query args yet; Moment-only scope is enforced server-side.
 
 		return rest_ensure_response( Moment_Plugin::instance()->notifications->get_notifications() );
+	}
+
+	/**
+	 * GET /moment/v1/moments/{id} — full editable payload for the composer.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_moment( WP_REST_Request $request ) {
+		$post_id = absint( $request->get_param( 'id' ) );
+		$post    = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post || '1' !== get_post_meta( $post_id, '_moment_is_moment', true ) ) {
+			return new WP_Error(
+				'moment_not_found',
+				__( 'Not a Moment post.', 'moment' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$caption = (string) get_post_meta( $post_id, '_moment_caption', true );
+
+		// Moments created before the caption meta existed: recover the
+		// paragraph text from the derived block markup.
+		if ( '' === $caption && preg_match_all( '#<p>(.*?)</p>#s', $post->post_content, $matches ) ) {
+			$caption = implode( "\n\n", array_map( 'wp_strip_all_tags', $matches[1] ) );
+		}
+
+		$media_ids = json_decode( (string) get_post_meta( $post_id, '_moment_media_ids', true ), true );
+		$media_ids = is_array( $media_ids ) ? array_map( 'intval', $media_ids ) : array();
+		$media     = array();
+
+		foreach ( $media_ids as $attachment_id ) {
+			if ( ! get_post( $attachment_id ) ) {
+				continue;
+			}
+
+			$kind = 'file';
+			if ( wp_attachment_is_image( $attachment_id ) ) {
+				$kind = 'image';
+			} elseif ( wp_attachment_is( 'video', $attachment_id ) ) {
+				$kind = 'video';
+			} elseif ( wp_attachment_is( 'audio', $attachment_id ) ) {
+				$kind = 'audio';
+			}
+
+			$thumbnail = wp_get_attachment_image_url( $attachment_id, 'medium' );
+
+			$media[] = array(
+				'id'        => $attachment_id,
+				'kind'      => $kind,
+				'thumbnail' => $thumbnail ? esc_url_raw( $thumbnail ) : '',
+				'filename'  => sanitize_file_name( basename( (string) get_attached_file( $attachment_id ) ) ),
+			);
+		}
+
+		$targets = json_decode( (string) get_post_meta( $post_id, '_moment_syndication_targets', true ), true );
+
+		$payload            = $this->prepare_moment_summary( $post_id );
+		$payload['caption'] = $caption;
+		$payload['media']   = $media;
+		$payload['targets'] = is_array( $targets ) ? array_values( array_filter( array_map( 'sanitize_key', $targets ) ) ) : array();
+
+		return rest_ensure_response( $payload );
+	}
+
+	/**
+	 * POST/PUT /moment/v1/moments/{id} — update a Moment from the composer.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_moment( WP_REST_Request $request ) {
+		$files = $request->get_file_params();
+
+		if ( ! empty( $files ) && ! current_user_can( 'upload_files' ) ) {
+			return new WP_Error(
+				'rest_cannot_upload',
+				__( 'You are not allowed to upload media.', 'moment' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		$targets = $request->get_param( 'targets' );
+		if ( null === $targets ) {
+			$targets = $request->get_param( 'syndication_targets' );
+		}
+
+		$data = array(
+			'caption'             => wp_kses_post( (string) $request->get_param( 'caption' ) ),
+			'title'               => sanitize_text_field( (string) $request->get_param( 'title' ) ),
+			'primary_type'        => sanitize_key( (string) $request->get_param( 'primary_type' ) ),
+			'syndication_targets' => $targets,
+			'alt_text'            => sanitize_text_field( (string) $request->get_param( 'alt_text' ) ),
+			'tags'                => $request->get_param( 'tags' ),
+		);
+
+		$status = sanitize_key( (string) $request->get_param( 'status' ) );
+		if ( in_array( $status, array( 'publish', 'draft' ), true ) ) {
+			$data['status'] = $status;
+		}
+
+		$result = Moment_Plugin::instance()->publisher->update(
+			absint( $request->get_param( 'id' ) ),
+			$data,
+			$files
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( $this->prepare_moment_summary( (int) $result ) );
 	}
 
 	/**

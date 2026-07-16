@@ -183,6 +183,9 @@ class Moment_Publisher {
 		$ai_assist_used = ! empty( $data['ai_assist_used'] ) ? '1' : '0';
 
 		update_post_meta( $post_id, '_moment_is_moment', '1' );
+		// Raw caption, so editing can reopen the composer losslessly
+		// (post_content is derived block markup, post_excerpt is trimmed).
+		update_post_meta( $post_id, '_moment_caption', $caption );
 		update_post_meta( $post_id, '_moment_primary_type', $type );
 		update_post_meta( $post_id, '_moment_media_ids', wp_json_encode( array_map( 'intval', $media_ids ) ) );
 		update_post_meta( $post_id, '_moment_syndication_targets', wp_json_encode( $targets ) );
@@ -218,6 +221,129 @@ class Moment_Publisher {
 		// the Moment goes live — from the app or wp-admin alike.
 		if ( 'publish' === get_post_status( $post_id ) ) {
 			$this->maybe_syndicate( $post_id, $targets, $moment_data );
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Update an existing Moment: caption, media (additive), targets,
+	 * and status.
+	 *
+	 * Meta is written before the post update so a draft→publish here
+	 * fires syndicate_on_publish() against the fresh targets. Existing
+	 * media is kept; new files are appended.
+	 *
+	 * @param int                                 $post_id The Moment post ID.
+	 * @param array<string, mixed>                $data    Sanitized input: caption, title,
+	 *                                                     primary_type, syndication_targets,
+	 *                                                     status, tags, alt_text.
+	 * @param array<string, array<string, mixed>> $files   $_FILES-style array of new media.
+	 * @return int|WP_Error Post ID on success.
+	 */
+	public function update( int $post_id, array $data, array $files = array() ) {
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post || '1' !== get_post_meta( $post_id, '_moment_is_moment', true ) ) {
+			return new WP_Error(
+				'moment_not_found',
+				__( 'Not a Moment post.', 'moment' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$caption = isset( $data['caption'] ) ? trim( wp_kses_post( (string) $data['caption'] ) ) : '';
+
+		$existing_media = json_decode( (string) get_post_meta( $post_id, '_moment_media_ids', true ), true );
+		$existing_media = is_array( $existing_media ) ? array_values( array_map( 'intval', $existing_media ) ) : array();
+
+		$file_list = $this->normalize_files( $files );
+
+		if ( '' === $caption && empty( $existing_media ) && empty( $file_list ) ) {
+			return new WP_Error(
+				'moment_empty',
+				__( 'A Moment needs media or text.', 'moment' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		foreach ( $file_list as $file ) {
+			$valid = $this->validate_file( $file );
+
+			if ( is_wp_error( $valid ) ) {
+				return $valid;
+			}
+		}
+
+		$new_ids = $this->sideload_files( $file_list );
+
+		if ( is_wp_error( $new_ids ) ) {
+			return $new_ids;
+		}
+
+		$media_ids = array_merge( $existing_media, array_map( 'intval', $new_ids ) );
+
+		$requested_type = isset( $data['primary_type'] ) ? sanitize_key( (string) $data['primary_type'] ) : '';
+		$type           = $this->detect_primary_type( $media_ids, $requested_type );
+
+		$raw_targets = $data['syndication_targets'] ?? null;
+
+		if ( is_array( $raw_targets ) || ( is_string( $raw_targets ) && '' !== trim( $raw_targets ) ) ) {
+			$targets = $this->sanitize_connector_ids( $raw_targets );
+			update_post_meta( $post_id, '_moment_syndication_targets', wp_json_encode( $targets ) );
+			$this->remember_destination_prefs( $type, $targets );
+		}
+
+		$title = isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '';
+
+		if ( '' === $title ) {
+			$title = $this->generate_title( $caption );
+		}
+
+		$new_status = $post->post_status;
+
+		if ( isset( $data['status'] ) && 'draft' === $data['status'] ) {
+			$new_status = 'draft';
+		} elseif ( isset( $data['status'] ) && 'publish' === $data['status'] && current_user_can( 'publish_posts' ) ) {
+			$new_status = 'publish';
+		}
+
+		if ( ! empty( $new_ids ) ) {
+			$this->attach_media( $post_id, array_map( 'intval', $new_ids ), $type );
+		}
+
+		$tags = array_filter( array_map( 'sanitize_text_field', (array) ( $data['tags'] ?? array() ) ) );
+		if ( $tags ) {
+			wp_set_post_tags( $post_id, $tags, true );
+		}
+
+		$alt_text = isset( $data['alt_text'] ) ? sanitize_text_field( (string) $data['alt_text'] ) : '';
+		if ( '' !== $alt_text && $media_ids ) {
+			$first_id = (int) $media_ids[0];
+			if ( wp_attachment_is_image( $first_id ) && '' === (string) get_post_meta( $first_id, '_wp_attachment_image_alt', true ) ) {
+				update_post_meta( $first_id, '_wp_attachment_image_alt', $alt_text );
+			}
+		}
+
+		update_post_meta( $post_id, '_moment_caption', $caption );
+		update_post_meta( $post_id, '_moment_primary_type', $type );
+		update_post_meta( $post_id, '_moment_media_ids', wp_json_encode( $media_ids ) );
+
+		$result = wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_title'   => $title,
+				'post_content' => $this->build_block_markup( $media_ids, $caption ),
+				'post_excerpt' => wp_trim_words( wp_strip_all_tags( $caption ), 24, '…' ),
+				'post_status'  => $new_status,
+			),
+			true
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 500 ) );
+
+			return $result;
 		}
 
 		return $post_id;

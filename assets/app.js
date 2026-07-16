@@ -31,6 +31,7 @@
 		aiAssistUsed: false,
 		lastPublish: null, // { response, targets, type }
 		fileCounter: 0,
+		editing: null, // { id, type, media: [{id, kind, thumbnail, filename}] } while editing a draft
 	};
 
 	const TYPE_LABELS = {
@@ -172,6 +173,35 @@
 		state.primaryType = 'note';
 		state.targets = [];
 		state.aiAssistUsed = false;
+		state.editing = null;
+	}
+
+	// Effective Moment type: new files win; otherwise an edited draft's
+	// stored type; otherwise the caption-only default. The server
+	// recomputes authoritatively on save.
+	function effectiveType() {
+		if (state.files.length && state.editing && state.editing.media.length) {
+			return 'mixed';
+		}
+		if (state.files.length) {
+			return detectType(state.files);
+		}
+		return state.editing ? state.editing.type : detectType(state.files);
+	}
+
+	// Load a draft into the composer for continued editing.
+	async function openDraft(id) {
+		const moment = await apiGet('moments/' + id);
+		resetComposer();
+		state.editing = {
+			id: moment.id,
+			type: moment.type || 'note',
+			media: Array.isArray(moment.media) ? moment.media : [],
+		};
+		state.caption = moment.caption || '';
+		state.targets = Array.isArray(moment.targets) ? moment.targets.slice() : [];
+		state.primaryType = state.editing.type;
+		navigate('#create');
 	}
 
 	function skeletonRows(count) {
@@ -344,6 +374,15 @@
 					return;
 				}
 				list.innerHTML = items.map((item) => this.renderItem(item)).join('');
+				list.querySelectorAll('[data-edit-draft]').forEach((row) => {
+					row.addEventListener('click', (event) => {
+						event.preventDefault();
+						row.setAttribute('aria-busy', 'true');
+						openDraft(row.getAttribute('data-edit-draft')).catch(() => {
+							row.removeAttribute('aria-busy');
+						});
+					});
+				});
 			} catch (err) {
 				if (list && list.isConnected) {
 					list.innerHTML =
@@ -362,13 +401,16 @@
 						(TYPE_LABELS[item.type] || 'M').charAt(0)
 				  )}</span>`;
 			// Drafts look identical to published Moments otherwise — and
-			// their permalinks are invisible to visitors — so say so.
-			const draftChip =
-				item.status && 'publish' !== item.status
-					? ' <span class="moment-chip moment-chip--draft">Draft</span>'
-					: '';
+			// their permalinks are invisible to visitors — so say so, and
+			// tapping one reopens the composer instead of the permalink.
+			const isDraft = item.status && 'publish' !== item.status;
+			const draftChip = isDraft
+				? ' <span class="moment-chip moment-chip--draft">Draft</span>'
+				: '';
+			const href = isDraft ? '#create' : item.permalink || '#home';
+			const editAttr = isDraft ? ` data-edit-draft="${esc(String(item.id))}"` : '';
 			return `
-			<a class="moment-recent__item" href="${esc(item.permalink || '#home')}">
+			<a class="moment-recent__item" href="${esc(href)}"${editAttr}>
 				${thumb}
 				<span class="moment-recent__body">
 					<span class="moment-recent__title">${esc(title)}${draftChip}</span>
@@ -384,12 +426,36 @@
 
 	const CreateScreen = {
 		render() {
+			const editing = state.editing;
+			const existingTiles =
+				editing && editing.media.length
+					? `<ul class="moment-preview__grid" aria-label="Media already attached to this draft">${editing.media
+							.map(
+								(m) =>
+									`<li class="moment-preview__tile">${
+										m.thumbnail
+											? `<img class="moment-preview__img" src="${esc(m.thumbnail)}" alt="Attached ${esc(
+													m.filename || m.kind
+											  )}" />`
+											: `<span class="moment-preview__glyph">${esc(m.kind)}</span>`
+									}</li>`
+							)
+							.join('')}</ul>`
+					: '';
 			return `
 			<header class="moment-topbar">
 				<a class="moment-backlink" href="#home">&larr; Back</a>
-				<h1 class="moment-topbar__title" tabindex="-1" data-moment-focus>New Moment</h1>
+				<h1 class="moment-topbar__title" tabindex="-1" data-moment-focus>${
+					editing ? 'Edit Draft' : 'New Moment'
+				}</h1>
 			</header>
 			<section class="moment-screen">
+				${
+					editing
+						? '<p class="moment-editbanner"><span class="moment-chip moment-chip--draft">Draft</span> Changes save to this Moment — new media is added alongside what’s attached.</p>'
+						: ''
+				}
+				${existingTiles}
 				<div class="moment-picker">
 					<input type="file" id="moment-file-input" class="moment-picker__input" accept="image/*,video/*,audio/*" multiple />
 					<label for="moment-file-input" class="moment-picker__zone">
@@ -400,7 +466,7 @@
 				</div>
 				<div class="moment-preview" data-preview></div>
 				<p class="moment-typebadge">Moment type: <span class="moment-chip" data-type-badge>${esc(
-					TYPE_LABELS[detectType(state.files)]
+					TYPE_LABELS[effectiveType()]
 				)}</span></p>
 				<div class="moment-field">
 					<label class="moment-field__label" for="moment-caption">Caption</label>
@@ -468,8 +534,12 @@
 					return;
 				}
 				status.textContent = '';
-				state.primaryType = detectType(state.files);
-				state.targets = defaultTargetsFor(state.primaryType);
+				state.primaryType = effectiveType();
+				// An edited draft keeps its stored destination selection;
+				// fresh Moments start from the per-type defaults.
+				if (!state.editing) {
+					state.targets = defaultTargetsFor(state.primaryType);
+				}
 				navigate('#publish');
 			});
 
@@ -482,7 +552,7 @@
 			if (!preview) {
 				return;
 			}
-			state.primaryType = detectType(state.files);
+			state.primaryType = effectiveType();
 			if (badge) {
 				badge.textContent = TYPE_LABELS[state.primaryType];
 			}
@@ -583,7 +653,7 @@
 				const suggestions = await apiPost('ai/suggestions', {
 					text: state.caption,
 					media_ids: [],
-					primary_type: detectType(state.files),
+					primary_type: effectiveType(),
 				});
 				if (!this.el || this.el.hidden) {
 					return;
@@ -874,7 +944,9 @@
 			state.tags.forEach((tag) => formData.append('tags[]', tag));
 
 			try {
-				const response = await apiUpload('moments', formData);
+				// Editing a draft updates it in place; otherwise create.
+				const path = state.editing ? 'moments/' + state.editing.id : 'moments';
+				const response = await apiUpload(path, formData);
 				state.lastPublish = {
 					response,
 					targets: state.targets.slice(),

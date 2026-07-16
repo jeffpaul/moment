@@ -280,6 +280,16 @@ h2[tabindex='-1']:focus {
 	white-space: nowrap;
 }
 
+/* Editing-a-draft banner at the top of the composer. */
+.moment-editbanner {
+	display: flex;
+	align-items: center;
+	gap: var(--moment-spacing-xs);
+	margin: 0 0 var(--moment-spacing-sm);
+	font-size: 13px;
+	color: var(--moment-text-secondary);
+}
+
 /* Neutral (non-brand) chip marking unpublished items in private views. */
 .moment-chip--draft {
 	background: var(--moment-bg-subtle, #f4f4f5);
