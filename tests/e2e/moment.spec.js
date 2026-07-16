@@ -228,7 +228,7 @@ test('draft lifecycle: save, resume from Drafts row, publish', async ({ page }) 
 	await expect(page.getByRole('heading', { name: 'Drafts' })).toBeVisible();
 	const row = page.locator('[data-edit-draft]').filter({ hasText: caption }).first();
 	await expect(row).toBeVisible();
-	await expect(row.getByText('Draft')).toBeVisible();
+	await expect(row.locator('.moment-chip--draft')).toBeVisible();
 
 	// Resume: composer reopens prefilled, destinations remembered.
 	await row.click();
@@ -254,6 +254,34 @@ test('unread dot appears for new replies and clears after viewing', async ({ pag
 	const caption = `E2E unread ${RUN_ID}`;
 
 	await loginAs(page);
+
+	// Hygiene: earlier tests leave syndicated Moments with never-imported
+	// stub replies; the async backflow freshen would import them during
+	// this test and legitimately re-set the unread flag. Drain everything
+	// first so this test owns the only unread transition.
+	await page.goto('/moment');
+	await page.evaluate(async () => {
+		const config = window.momentApp;
+		const listRes = await fetch(`${config.restUrl}moments?per_page=20`, {
+			headers: { 'X-WP-Nonce': config.nonce },
+			credentials: 'same-origin',
+		});
+		const moments = await listRes.json();
+		for (const moment of moments) {
+			await fetch(`${config.restUrl}moments/${moment.id}/sync-responses`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': config.nonce, 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ networks: ['bluesky'] }),
+			});
+		}
+		// Mark everything seen so the baseline is "no unread".
+		await fetch(`${config.restUrl}notifications`, {
+			headers: { 'X-WP-Nonce': config.nonce },
+			credentials: 'same-origin',
+		});
+	});
+
 	await page.goto('/moment');
 	await page.locator('[data-action="new-moment"]').click();
 	await page.fill('#moment-caption', caption);
