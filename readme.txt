@@ -4,7 +4,7 @@ Tags: publishing, mobile, pwa, syndication, indieweb
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,17 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 
 == Changelog ==
 
+= 0.2.0 =
+* Save as Draft: start a Moment now, finish it later. Drafts store your selected destinations and never syndicate until published.
+* Continue editing: tap a draft on Home to reopen the composer with its caption, media, and destinations restored; publishing an edited draft (from the app or wp-admin) runs the stored destinations.
+* Drafts row on Home keeps drafts reachable no matter how many Moments publish after them; draft rows carry a Draft chip.
+* Unread indicator on the notifications bell — a simple dot, cleared by viewing notifications.
+* The + New Moment button moved to the bottom of the screen for one-handed reach.
+* "Open Moment" action link on the Plugins screen for a one-click path into the app.
+* Section pages are created with Moment blocks, so block themes edit them natively; shortcodes remain fully supported.
+* Slug collisions are handled instead of silently shadowed: existing pages keep /timeline (etc.) while Moment views fall back to prefixed slugs, and a site with content at /moment gets the app at /moment-app — app links always point at the real locations.
+* The PWA manifest is served dynamically for the resolved app path, without a redirect hop, and no longer hardcodes the wp-content path.
+
 = 0.1.1 =
 * App shell CSS/JS now load through the WordPress enqueue API (registered handles, inline bootstrap config via wp_add_inline_script, defer strategy).
 * Tightened REST API capability checks: draft Moments list only for users who can edit them, notifications are scoped to Moments the current user can edit, syncing responses requires edit_post on the target, and attaching media requires upload_files.
@@ -100,6 +111,9 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 * Timeline and per-type views as both shortcodes and dynamic blocks.
 
 == Upgrade Notice ==
+
+= 0.2.0 =
+Adds drafts (save, resume, deferred syndication), an unread notifications indicator, and collision-safe app and section-page URLs.
 
 = 0.1.1 =
 Tightens REST API capability checks and moves app assets to the WordPress enqueue API.
