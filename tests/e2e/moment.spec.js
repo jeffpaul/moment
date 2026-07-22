@@ -392,3 +392,21 @@ test('publish in flight disables both buttons and shows only the button loading 
 
 	await expect(page.getByText('Published to your site')).toBeVisible();
 });
+
+// Site-views nav renders as icon links: an SVG glyph, the label as the
+// accessible name (role+name) and as the hover title, no visible text.
+test('site-views nav shows icons with accessible labels', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/moment');
+
+	const timeline = page.getByRole('link', { name: 'Timeline' });
+	await expect(timeline).toBeVisible();
+	await expect(timeline).toHaveAttribute('title', 'Timeline');
+	await expect(timeline.locator('svg.moment-bottomnav__icon')).toBeVisible();
+	expect(await timeline.getAttribute('href')).toContain('/timeline');
+
+	// Every view link carries an icon.
+	await expect(page.locator('.moment-bottomnav__link svg')).toHaveCount(5);
+	// The label text is present for assistive tech but visually hidden.
+	await expect(page.getByRole('link', { name: 'Notes' })).toBeVisible();
+});

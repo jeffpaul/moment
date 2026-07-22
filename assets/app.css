@@ -446,10 +446,18 @@ h2[tabindex='-1']:focus {
 	min-height: var(--moment-tap-min);
 	padding: 0 var(--moment-spacing-xs);
 	border-radius: var(--moment-radius-sm);
-	font-size: 13px;
-	font-weight: 500;
 	color: var(--moment-text-secondary);
 	text-decoration: none;
+}
+
+.moment-bottomnav__link:hover,
+.moment-bottomnav__link:focus-visible {
+	color: var(--moment-accent);
+	background: var(--moment-accent-wash);
+}
+
+.moment-bottomnav__icon {
+	display: block;
 }
 
 /* --- Create: media picker --- */

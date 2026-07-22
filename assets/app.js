@@ -128,6 +128,26 @@
 		notes: 'Notes',
 	};
 
+	// Feather-style icon glyphs (inner SVG markup) for the site-views nav,
+	// matching the app's other inline icons. Text stays as the accessible
+	// name and hover title.
+	const PAGE_ICONS = {
+		timeline:
+			'<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>',
+		images:
+			'<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>',
+		videos:
+			'<polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>',
+		audio:
+			'<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>',
+		notes:
+			'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>',
+	};
+
+	function pageNavIcon(glyph) {
+		return `<svg class="moment-bottomnav__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>`;
+	}
+
 	/**
 	 * Detect the Moment type from selected files (client-side mirror of the
 	 * server-side detection used for routing defaults).
@@ -355,9 +375,11 @@
 						.filter((view) => pageLink(view))
 						.map(
 							(view) =>
-								`<a class="moment-bottomnav__link" href="${esc(pageLink(view))}">${
+								`<a class="moment-bottomnav__link" href="${esc(pageLink(view))}" title="${esc(
 									PAGE_LABELS[view]
-								}</a>`
+								)}">${pageNavIcon(PAGE_ICONS[view])}<span class="moment-visually-hidden">${esc(
+									PAGE_LABELS[view]
+								)}</span></a>`
 						)
 						.join('');
 					return links
