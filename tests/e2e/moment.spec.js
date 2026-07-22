@@ -328,6 +328,11 @@ test('unread dot appears for new replies and clears after viewing', async ({ pag
 	await page.locator('[data-action="publish"]').click();
 	await expect(page.getByText('Published to your site')).toBeVisible();
 
+	// Comment dates are second-resolution and the "seen" baseline was set
+	// moments ago; guarantee the imported reply lands in a later second so
+	// has_unread()'s strict > holds on fast runners (not a flake).
+	await page.waitForTimeout(1100);
+
 	// Import replies through the sync endpoint (same as the hourly cron).
 	await page.evaluate(async () => {
 		const config = window.momentApp;
