@@ -229,6 +229,22 @@ h2[tabindex='-1']:focus {
 	min-height: var(--moment-tap-min);
 }
 
+.moment-recent__more {
+	margin: var(--moment-spacing-xs) 0 0;
+	text-align: center;
+}
+
+.moment-recent__morelink {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--moment-tap-min);
+	color: var(--moment-accent);
+	font-weight: 600;
+	font-size: 14px;
+	text-decoration: none;
+}
+
 .moment-btn--hero {
 	min-height: 64px;
 	font-size: 18px;

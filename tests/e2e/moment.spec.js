@@ -187,6 +187,35 @@ test('home CTA sits in the thumb zone', async ({ page }) => {
 	expect(box.y).toBeGreaterThan(viewport.height * 0.6);
 });
 
+// Recent Moments caps at five and offers a "View more" link to the
+// timeline once more than five published Moments exist.
+test('home shows five recent Moments with a View more link to the timeline', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/moment');
+
+	// Publish six quick note Moments via REST (fast, no media).
+	await page.evaluate(async () => {
+		const config = window.momentApp;
+		for (let i = 1; i <= 6; i++) {
+			await fetch(`${config.restUrl}moments`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': config.nonce, 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ caption: `View-more seed ${i}`, primary_type: 'note' }),
+			});
+		}
+	});
+
+	await page.goto('/moment');
+	const rows = page.locator('[data-recent-list] .moment-recent__item');
+	await expect(rows.first()).toBeVisible();
+	await expect(rows).toHaveCount(5);
+
+	const more = page.locator('.moment-recent__morelink');
+	await expect(more).toBeVisible();
+	expect(await more.getAttribute('href')).toContain('/timeline');
+});
+
 // Plugins list table offers a one-click path into the app.
 test('plugins page offers an Open Moment action link', async ({ page }) => {
 	await loginAs(page);

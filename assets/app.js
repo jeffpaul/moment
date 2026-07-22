@@ -345,6 +345,7 @@
 						${skeletonRows(3)}
 						<span class="moment-visually-hidden">Loading recent Moments</span>
 					</div>
+					<p class="moment-recent__more" data-recent-more hidden></p>
 				</section>
 			</section>
 			<footer class="moment-homefooter">
@@ -407,7 +408,8 @@
 					this.bindDraftTaps(draftsList);
 				}
 
-				const items = Array.isArray(published) ? published.slice(0, 5) : [];
+				const publishedItems = Array.isArray(published) ? published : [];
+				const items = publishedItems.slice(0, 5);
 				if (!items.length) {
 					list.innerHTML = draftItems.length
 						? '<p class="moment-empty">Nothing published yet.</p>'
@@ -415,6 +417,17 @@
 					return;
 				}
 				list.innerHTML = items.map((item) => this.renderItem(item)).join('');
+
+				// When more published Moments exist than the five shown, offer
+				// a path to the full timeline (only if that page resolved).
+				const more = root.querySelector('[data-recent-more]');
+				const timeline = pageLink('timeline');
+				if (more && timeline && publishedItems.length > items.length) {
+					more.innerHTML = `<a class="moment-recent__morelink" href="${esc(
+						timeline
+					)}">View more on your timeline &rarr;</a>`;
+					more.hidden = false;
+				}
 			} catch (err) {
 				if (list && list.isConnected) {
 					list.innerHTML =
