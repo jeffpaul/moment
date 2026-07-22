@@ -202,13 +202,13 @@ h2[tabindex='-1']:focus {
 	border-color: var(--moment-accent-deep);
 }
 
-.moment-btn--primary:disabled {
+.moment-btn:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
 
-.moment-btn--secondary:hover,
-.moment-btn--secondary:active {
+.moment-btn--secondary:not(:disabled):hover,
+.moment-btn--secondary:not(:disabled):active {
 	border-color: var(--moment-accent-light);
 	background: var(--moment-accent-wash);
 }

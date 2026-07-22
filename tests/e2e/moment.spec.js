@@ -365,3 +365,30 @@ test('unread dot appears for new replies and clears after viewing', async ({ pag
 	await expect(page.locator('[data-action="new-moment"]')).toBeVisible();
 	await expect(page.locator('.moment-iconbtn__dot')).toHaveCount(0);
 });
+
+// While a publish is in flight: both buttons disabled, the button shows
+// the loading state, and there is no separate "Publishing…" message.
+test('publish in flight disables both buttons and shows only the button loading state', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/moment');
+	await page.locator('[data-action="new-moment"]').click();
+	await page.fill('#moment-caption', `E2E loading ${RUN_ID}`);
+	await page.locator('[data-action="next"]').click();
+
+	// Hold the create request so the in-flight UI is observable.
+	await page.route('**/moment/v1/moments', async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+		await route.continue();
+	});
+
+	await page.locator('[data-action="publish"]').click();
+
+	const publishBtn = page.locator('[data-action="publish"]');
+	const draftBtn = page.locator('[data-action="save-draft"]');
+	await expect(publishBtn).toBeDisabled();
+	await expect(draftBtn).toBeDisabled();
+	await expect(publishBtn).toHaveText('Publishing…');
+	await expect(page.locator('[data-publish-status]')).toHaveText('');
+
+	await expect(page.getByText('Published to your site')).toBeVisible();
+});

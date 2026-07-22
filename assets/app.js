@@ -971,12 +971,15 @@
 				isDraft ? '[data-action="publish"]' : '[data-action="save-draft"]'
 			);
 			const status = root.querySelector('[data-publish-status]');
+			// Disable both actions and show the loading state on the button
+			// itself — no separate "Publishing…" message (redundant). The
+			// status line is reserved for errors below.
 			button.disabled = true;
 			if (otherButton) {
 				otherButton.disabled = true;
 			}
 			button.textContent = isDraft ? 'Saving…' : 'Publishing…';
-			status.textContent = isDraft ? 'Saving your draft…' : 'Publishing your Moment…';
+			status.textContent = '';
 
 			const formData = new FormData();
 			formData.append('caption', state.caption);
