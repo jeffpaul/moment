@@ -173,6 +173,22 @@ h2[tabindex='-1']:focus {
 	color: var(--moment-text-secondary);
 }
 
+/* Awareness note: other publishing plugins that will also share a Moment. */
+.moment-helpers-note {
+	margin: var(--moment-spacing-md) 0 0;
+	padding: var(--moment-spacing-sm) var(--moment-spacing-md);
+	border-radius: var(--moment-radius-sm);
+	background: var(--moment-accent-wash);
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--moment-text-secondary);
+}
+
+.moment-helpers-note strong {
+	color: var(--moment-text-primary, inherit);
+	font-weight: 600;
+}
+
 /* --- Buttons --- */
 .moment-btn {
 	display: inline-flex;

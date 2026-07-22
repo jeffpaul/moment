@@ -410,3 +410,18 @@ test('site-views nav shows icons with accessible labels', async ({ page }) => {
 	// The label text is present for assistive tech but visually hidden.
 	await expect(page.getByRole('link', { name: 'Notes' })).toBeVisible();
 });
+
+// Awareness note: when a third-party publishing plugin is active, the
+// publish screen tells the user their Moment will also go out that way.
+// (The E2E publish-helper mu-plugin registers a fake "Test Publicize".)
+test('publish screen notes active third-party publishing plugins', async ({ page }) => {
+	await loginAs(page);
+	await page.goto('/moment');
+	await page.locator('[data-action="new-moment"]').click();
+	await page.fill('#moment-caption', `E2E helpers ${RUN_ID}`);
+	await page.locator('[data-action="next"]').click();
+
+	const note = page.locator('.moment-helpers-note');
+	await expect(note).toBeVisible();
+	await expect(note).toContainText('Test Publicize');
+});

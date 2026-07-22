@@ -954,6 +954,14 @@
 					</li>
 					${connectors.length ? connectorRows : rows}
 				</ul>
+				${(() => {
+					const helpers = config.publishHelpers || [];
+					if (!Array.isArray(helpers) || !helpers.length) {
+						return '';
+					}
+					const names = helpers.map((h) => esc(h.label)).join(', ');
+					return `<p class="moment-helpers-note">Your site’s publishing tools will also share this Moment, per their own settings: <strong>${names}</strong>.</p>`;
+				})()}
 			</section>
 			<footer class="moment-actionbar">
 				<p class="moment-status" data-publish-status aria-live="polite"></p>

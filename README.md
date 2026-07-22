@@ -172,6 +172,30 @@ Moment also renders IndieWeb `u-syndication` markup on Moment posts
 what Bridgy needs to backfeed replies from those copies as webmentions —
 so connector-based syndication and webmention backfeed compose.
 
+### I already run a social auto-poster (Jetpack Social, XPoster, …). Does it work with Moment?
+
+Yes, automatically — because a Moment is a standard WordPress post.
+Any "publicize"-style plugin that shares posts when they publish already
+shares your Moments the same way; Moment neither drives nor blocks it.
+
+So Moment doesn't need to reimplement that. Instead, when it detects one
+of these active, the publish screen adds a small note — "Your site's
+publishing tools will also share this Moment, per their own settings:
+…" — so you know your Moment is going out that way too. Moment reads
+only whether the plugin is active; it never calls or configures it, and
+each plugin still shares according to its own settings and per-post
+controls.
+
+Detected out of the box: **Jetpack Social**, **ATmosphere**,
+**Autoblue**, **Share on Mastodon**, **XPoster**, and **Autoshare for
+Twitter**. Other publishing plugins can add themselves to the note via
+the `moment_publish_helper_plugins` filter.
+
+One thing to watch: if you run *both* a Moment connector for a network
+**and** one of these plugins for the same network, a Moment can post
+twice. The note is there partly to make that visible — turn one of them
+off for that network if you don't want the duplicate.
+
 ### Which AI providers power which Moment features?
 
 Moment never talks to an AI vendor directly — it goes through the
