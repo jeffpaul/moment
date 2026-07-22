@@ -909,7 +909,9 @@
 				<h1 class="moment-topbar__title" tabindex="-1" data-moment-focus>Where should this go?</h1>
 			</header>
 			<section class="moment-screen">
-				<p class="moment-typebadge">Publishing a <span class="moment-chip">${esc(
+				<p class="moment-typebadge">Publishing ${
+					/^[aeiou]/i.test(TYPE_LABELS[state.primaryType] || '') ? 'an' : 'a'
+				} <span class="moment-chip">${esc(
 					TYPE_LABELS[state.primaryType]
 				)}</span> Moment</p>
 				<ul class="moment-destlist">

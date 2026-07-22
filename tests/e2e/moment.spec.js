@@ -103,6 +103,9 @@ test('image Moment: picker works, choice of networks is remembered per type', as
 	await page.fill('#moment-caption', caption);
 	await page.locator('[data-action="next"]').click();
 
+	// Grammatical article: "an Image", not "a Image".
+	await expect(page.locator('.moment-typebadge')).toContainText('Publishing an Image Moment');
+
 	// Image default is Instagram — not connected, so nothing preselected;
 	// Bluesky is offered (text networks take any type) but off.
 	await expect(page.locator('[data-connector="bluesky"]')).not.toBeChecked();
@@ -296,7 +299,9 @@ test('unread dot appears for new replies and clears after viewing', async ({ pag
 	await page.goto('/moment');
 	await page.evaluate(async () => {
 		const config = window.momentApp;
-		const listRes = await fetch(`${config.restUrl}moments?per_page=20`, {
+		// per_page=50 is the REST cap — drain as many prior Moments as the
+		// API allows so the baseline holds even on a well-used site.
+		const listRes = await fetch(`${config.restUrl}moments?per_page=50`, {
 			headers: { 'X-WP-Nonce': config.nonce },
 			credentials: 'same-origin',
 		});
