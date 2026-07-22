@@ -50,6 +50,47 @@ class Test_Publisher extends WP_UnitTestCase {
 		$this->assertEquals( 'mobile', get_post_meta( $post_id, '_moment_created_from', true ) );
 	}
 
+	/** Each Moment type gets the matching post format, not the site default. */
+	public function test_post_format_matches_type() {
+		// Simulate a site whose default post format is Aside.
+		update_option( 'default_post_format', 'aside' );
+
+		$publisher = new Moment_Publisher();
+		$cases     = array(
+			'note'  => 'aside',
+			'mixed' => false, // Standard: no format term.
+		);
+
+		foreach ( $cases as $type => $expected ) {
+			$post_id = $publisher->publish(
+				array(
+					'caption'      => "Format check {$type}",
+					'primary_type' => $type,
+				)
+			);
+
+			$this->assertSame( $expected, get_post_format( $post_id ), "Type {$type} should map to " . var_export( $expected, true ) );
+		}
+	}
+
+	/** An image Moment lands in the image format even when it starts as a note draft. */
+	public function test_post_format_updates_on_type_change() {
+		update_option( 'default_post_format', 'aside' );
+
+		$publisher = new Moment_Publisher();
+		$post_id   = (int) $publisher->publish(
+			array(
+				'caption'      => 'Starts as a note',
+				'primary_type' => 'note',
+			)
+		);
+		$this->assertSame( 'aside', get_post_format( $post_id ) );
+
+		// Re-classify as an image via update (mirrors adding media on edit).
+		$publisher->update( $post_id, array( 'caption' => 'Now an image', 'primary_type' => 'image' ) );
+		$this->assertSame( 'image', get_post_format( $post_id ) );
+	}
+
 	/** A Moment with no media and no caption is rejected. */
 	public function test_empty_moment_rejected() {
 		$publisher = new Moment_Publisher();

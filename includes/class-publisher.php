@@ -26,6 +26,26 @@ class Moment_Publisher {
 	public const PRIMARY_TYPES = array( 'image', 'video', 'audio', 'podcast', 'note', 'gallery', 'mixed' );
 
 	/**
+	 * Moment type → WordPress standard post format.
+	 *
+	 * Set explicitly so a Moment lands in the right format regardless of
+	 * the site's default post format (Settings → Writing). 'mixed' maps to
+	 * the standard format (no term). Themes without post-format support
+	 * simply ignore the term.
+	 *
+	 * @var array<string, string>
+	 */
+	private const TYPE_POST_FORMATS = array(
+		'image'   => 'image',
+		'gallery' => 'gallery',
+		'video'   => 'video',
+		'audio'   => 'audio',
+		'podcast' => 'audio',
+		'note'    => 'aside',
+		'mixed'   => 'standard',
+	);
+
+	/**
 	 * Allowed MIME types for Moment media uploads.
 	 *
 	 * MIME must be validated against file content (finfo +
@@ -196,6 +216,8 @@ class Moment_Publisher {
 		update_post_meta( $post_id, '_moment_ai_assist_used', $ai_assist_used );
 		update_post_meta( $post_id, '_moment_created_from', 'mobile' );
 
+		$this->apply_post_format( $post_id, $type );
+
 		$moment_data = array(
 			'post_id'              => $post_id,
 			'primary_type'         => $type,
@@ -328,6 +350,9 @@ class Moment_Publisher {
 		update_post_meta( $post_id, '_moment_caption', $caption );
 		update_post_meta( $post_id, '_moment_primary_type', $type );
 		update_post_meta( $post_id, '_moment_media_ids', wp_json_encode( $media_ids ) );
+
+		// Re-apply in case the type changed on edit (e.g. adding media to a note).
+		$this->apply_post_format( $post_id, $type );
 
 		$result = wp_update_post(
 			array(
@@ -770,6 +795,22 @@ class Moment_Publisher {
 		if ( ! empty( $groups['image'] ) ) {
 			set_post_thumbnail( $post_id, $groups['image'][0] );
 		}
+	}
+
+	/**
+	 * Set the post format matching the Moment type, so a Moment is not
+	 * left in the site's default post format (e.g. an image Moment
+	 * landing under Asides).
+	 *
+	 * @param int    $post_id Moment post ID.
+	 * @param string $type    Primary Moment type.
+	 * @return void
+	 */
+	private function apply_post_format( int $post_id, string $type ): void {
+		$format = self::TYPE_POST_FORMATS[ $type ] ?? 'standard';
+
+		// 'standard' clears the format term (set_post_format( , false )).
+		set_post_format( $post_id, 'standard' === $format ? false : $format );
 	}
 
 	/**
