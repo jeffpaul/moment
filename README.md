@@ -187,9 +187,10 @@ each plugin still shares according to its own settings and per-post
 controls.
 
 Detected out of the box: **Jetpack Social**, **ATmosphere**,
-**Autoblue**, **Share on Mastodon**, **XPoster**, and **Autoshare for
-Twitter**. Other publishing plugins can add themselves to the note via
-the `moment_publish_helper_plugins` filter.
+**Autoblue**, **Share on Mastodon**, **XPoster**, **Autoshare for
+Twitter**, **Blog2Social**, **Social Networks Auto-Poster (SNAP)**, and
+**Revive Old Posts**. Other publishing plugins can add themselves to the
+note via the `moment_publish_helper_plugins` filter.
 
 One thing to watch: if you run *both* a Moment connector for a network
 **and** one of these plugins for the same network, a Moment can post

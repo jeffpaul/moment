@@ -60,6 +60,18 @@ class Moment_Publish_Helpers {
 			'label' => 'Autoshare for Twitter',
 			'slugs' => array( 'autoshare-for-twitter' ),
 		),
+		'blog2social'           => array(
+			'label' => 'Blog2Social',
+			'slugs' => array( 'blog2social' ),
+		),
+		'snap'                  => array(
+			'label' => 'Social Networks Auto-Poster (SNAP)',
+			'slugs' => array( 'social-networks-auto-poster-facebook-twitter-g' ),
+		),
+		'revive-old-posts'      => array(
+			'label' => 'Revive Old Posts',
+			'slugs' => array( 'tweet-old-post' ),
+		),
 	);
 
 	/**

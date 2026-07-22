@@ -15,6 +15,15 @@ class Test_Publish_Helpers extends WP_UnitTestCase {
 		$this->assertSame( array(), Moment_Publish_Helpers::detect() );
 	}
 
+	/** The known publishing plugins ship in the default definitions. */
+	public function test_known_plugins_are_defined() {
+		$defs = Moment_Publish_Helpers::definitions();
+
+		foreach ( array( 'jetpack', 'atmosphere', 'autoblue', 'share-on-mastodon', 'xposter', 'autoshare-for-twitter', 'blog2social', 'snap', 'revive-old-posts' ) as $id ) {
+			$this->assertArrayHasKey( $id, $defs, "Expected {$id} in default definitions" );
+		}
+	}
+
 	/** An active plugin slug is detected and reported with its label. */
 	public function test_detects_by_active_plugin_slug() {
 		$filter = static function ( $plugins ) {
