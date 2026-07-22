@@ -4,7 +4,7 @@ Tags: publishing, mobile, pwa, syndication, indieweb
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,15 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 
 == Changelog ==
 
+= 0.3.0 =
+* Awareness for other publishing plugins: when Jetpack Social, ATmosphere, Autoblue, Share on Mastodon, XPoster, Autoshare for Twitter, Blog2Social, Social Networks Auto-Poster (SNAP), or Revive Old Posts is active, the publish screen notes that your Moment will also go out through it. Detection only — Moment never drives or configures them — and it is extensible via the `moment_publish_helper_plugins` filter.
+* Site-views nav (Timeline/Images/Videos/Audio/Notes) now uses icons, with each label kept as the hover tooltip and the accessible name.
+* Recent Moments caps at five with a "View more" link to your timeline once there are more.
+* Each Moment now gets a post format matching its type (image → Image, note → Aside, …) instead of inheriting the site's default format.
+* Publishing shows the loading state on the button itself; both Publish and Save as Draft disable while a publish is in flight.
+* "Publishing a Image Moment" now reads "Publishing an Image Moment".
+* The Drafts section is hidden when there are no drafts.
+
 = 0.2.0 =
 * Save as Draft: start a Moment now, finish it later. Drafts store your selected destinations and never syndicate until published.
 * Continue editing: tap a draft on Home to reopen the composer with its caption, media, and destinations restored; publishing an edited draft (from the app or wp-admin) runs the stored destinations.
@@ -111,6 +120,9 @@ Partially. A conservative service worker caches only the app's static CSS and JS
 * Timeline and per-type views as both shortcodes and dynamic blocks.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Notes active social-publishing plugins on the publish screen, icon-based site nav, per-type post formats, and publish-UI polish.
 
 = 0.2.0 =
 Adds drafts (save, resume, deferred syndication), an unread notifications indicator, and collision-safe app and section-page URLs.
